@@ -69,10 +69,10 @@ int main(int argc, char* argv[]) try {
     ireq.get_tensor("attention_mask").set_shape({BATCH_SIZE, 1});
     ireq.get_tensor("attention_mask").data<int32_t>()[0] = 1;
     constexpr int32_t SPECIAL_EOS_TOKEN = 2;  // There's no way to extract the value from the tokenizer for now
+    for (size_t idx = 2; idx < inputs.size(); ++idx) {
+        ireq.set_input_tensor(idx, ireq.get_output_tensor(idx - 1));
+    }
     while (out_token != SPECIAL_EOS_TOKEN) {
-        for (size_t idx = 2; idx < inputs.size(); ++idx) {
-             ireq.set_input_tensor(idx, ireq.get_output_tensor(idx - 1));
-        }
         ireq.get_tensor("input_ids").data<int32_t>()[0] = out_token;
         ireq.start_async();
         print_token(detokenizer, out_token);
