@@ -146,6 +146,7 @@ struct GroupBeamSearcher {
         for (Group& group : groups) {
             group.ongoing.resize(parameters.group_size);
             group.ongoing.front().score = 0.0;
+            group.ongoing.tokens = parameters.prompt;
         }
     }
     std::vector<TokenToBeam> process(const ov::Tensor& logits) {
@@ -182,11 +183,9 @@ struct GroupBeamSearcher {
                         tokens.at(size_t(prev_beam.tokens.back())).log_prob -= parameters.diversity_penalty;
                     }
                 }
-                std::vector<int64_t> full_text{parameters.prompt};
-                full_text.insert(full_text.end(), beam.tokens.begin(), beam.tokens.end());
-                if (full_text.size() > 1 && full_text.size() >= parameters.no_repeat_ngram_size) {
-                    auto tail_start = full_text.end() - ptrdiff_t(parameters.no_repeat_ngram_size) + 1;
-                    for (int64_t banned_token : kmp_search(full_text, {tail_start, full_text.end()})) {
+                if (beam.tokens.size() > 1 && beam.tokens.size() >= parameters.no_repeat_ngram_size) {
+                    auto tail_start = beam.tokens.end() - ptrdiff_t(parameters.no_repeat_ngram_size) + 1;
+                    for (int64_t banned_token : kmp_search(beam.tokens, {tail_start, beam.tokens.end()})) {
                         tokens.at(size_t(banned_token)).log_prob = -std::numeric_limits<float>::infinity();
                     }
                 }

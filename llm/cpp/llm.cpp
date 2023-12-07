@@ -112,13 +112,13 @@ int main(int argc, char* argv[]) try {
             }
         }
         std::cout << "Group:\n";
-        for (Beam& beam : group.min_heap) {
-            beam.tokens.insert(beam.tokens.begin(), parameters.prompt.begin(), parameters.prompt.end());
+        for (const Beam& beam : group.min_heap) {
             std::string detokenized = detokenize(detokenizer, beam.tokens);
             if (detokenized.size() < prompt.size()) {
-                throw std::runtime_error("Beam search must not reduce input sequence");
+                throw std::runtime_error("Beam search must not truncate prompt");
             }
-            std::cout << beam.score << ": " << std::string_view{detokenized.data() + prompt.size(), detokenized.size() - prompt.size()} << '\n';
+            std::string_view generated{detokenized.data() + prompt.size(), detokenized.size() - prompt.size()};
+            std::cout << beam.score << ": " << generated << '\n';
         }
     }
 } catch (const std::exception& error) {
