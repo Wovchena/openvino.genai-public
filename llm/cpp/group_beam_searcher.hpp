@@ -146,7 +146,7 @@ struct GroupBeamSearcher {
         for (Group& group : groups) {
             group.ongoing.resize(parameters.group_size);
             group.ongoing.front().score = 0.0;
-            group.ongoing.tokens = parameters.prompt;
+            group.ongoing.front().tokens = parameters.prompt;
         }
     }
     std::vector<TokenToBeam> process(const ov::Tensor& logits) {
