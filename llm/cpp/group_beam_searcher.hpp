@@ -146,7 +146,7 @@ struct GroupBeamSearcher {
         for (Group& group : groups) {
             group.ongoing.resize(parameters.group_size);
             group.ongoing.front().score = 0.0;
-            group.ongoing.front().tokens = parameters.prompt;
+            group.ongoing.front().tokens = this->parameters.prompt;
         }
     }
     std::vector<TokenToBeam> process(const ov::Tensor& logits) {
@@ -157,9 +157,9 @@ struct GroupBeamSearcher {
             if (!group.done) {
                 for (Beam& beam : group.ongoing) {
                     beam.global_beam_idx = beam_count;
-                    // beam.tokens.empty() holds for the first process() call.
-                    // Every beam should be constructed from the single batch
-                    if (!beam.tokens.empty()) {
+                    // Every beam should be constructed from the single batch on first process() call
+                    if (group.ongoing.front().tokens.size() != parameters.prompt.size()) {
+                        // It's not the first process() call
                         ++beam_count;
                     }
                 }
