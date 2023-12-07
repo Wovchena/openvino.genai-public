@@ -99,7 +99,7 @@ struct Group {
     std::vector<Beam> min_heap;  // The worst of the best completed beams is the first
     bool done = false;
     void finish(Beam&& beam, const Parameters& parameters) {
-        beam.score /= std::pow(float(parameters.prompt.size() + beam.tokens.size()), parameters.length_penalty);
+        beam.score /= std::pow(float(beam.tokens.size()), parameters.length_penalty);
         min_heap.push_back(std::move(beam));
         std::push_heap(min_heap.begin(), min_heap.end(), greater);
         if (min_heap.size() > parameters.group_size) {
@@ -111,7 +111,7 @@ struct Group {
         if (min_heap.size() < parameters.group_size) {
             return;
         }
-        size_t cur_len = parameters.prompt.size() + ongoing.front().tokens.size();
+        size_t cur_len = ongoing.front().tokens.size();
         float best_sum_logprobs = ongoing.front().score;
         float worst_score = min_heap.front().score;
         switch (parameters.stop_criteria) {
