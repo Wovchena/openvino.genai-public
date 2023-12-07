@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) try {
         for (const Beam& beam : group.min_heap) {
             std::string detokenized = detokenize(detokenizer, beam.tokens);
             if (detokenized.size() < prompt.size()) {
-                throw std::runtime_error("Beam search must not truncate prompt");
+                throw std::runtime_error("Detokenized sequence became smaller than the prompt which must be included");
             }
             std::string_view generated{detokenized.data() + prompt.size(), detokenized.size() - prompt.size()};
             std::cout << beam.score << ": " << generated << '\n';
