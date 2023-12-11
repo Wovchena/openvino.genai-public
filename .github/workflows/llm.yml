@@ -161,7 +161,7 @@ jobs:
       - name: Compare
         shell: bash
         run: |
-          export OPENVINO_LIB_PATHS=$PWD/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/3rdparty/tbb/bin:$GITHUB_WORKSPACE/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/bin/intel64/Release
+          export OPENVINO_LIB_PATHS=$PWD/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/3rdparty/tbb/bin:$PWD/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/bin/intel64/Release
           export PATH=$PWD:$PATH
           export PYTHONPATH=./w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/python:./w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/python/python3
           pwd
