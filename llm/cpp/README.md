@@ -34,6 +34,7 @@ The program loads a model a tokenizer, and a detokenizer (`.xml` and `.bin`) to 
 ```sh
 source <OpenVINO dir>/setupvars.sh
 python -m pip install --upgrade-strategy eager "optimum[openvino]>=1.14" thirdparty/openvino_contrib/modules/custom_operations/[transformers] --extra-index-url https://download.pytorch.org/whl/cpu
+python -m pip uninstall --yes optimum-intel
 python -m pip install git+https://github.com/huggingface/optimum-intel.git@5dac93d6e8d15c96fe061c653d82b7afd54954db
 optimum-cli export openvino -m meta-llama/Llama-2-7b-hf ./Llama-2-7b-hf/
 python ./llm/cpp/convert_tokenizers.py ./Llama-2-7b-hf/
