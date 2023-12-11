@@ -150,6 +150,7 @@ jobs:
         shell: cmd
         run: |
           set INTEL_OPENVINO_DIR=.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64
+          set OpenVINO_DIR=.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\runtime\cmake
           set PATH=.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\runtime\3rdparty\tbb\bin;.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\runtime\bin\intel64\Release;.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\runtime\bin\intel64\Debug;%PATH%
           set PYTHONPATH=.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\python;.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\python\python3
           optimum-cli export openvino -m TinyLlama/TinyLlama-1.1B-Chat-v0.6 .\TinyLlama-1.1B-Chat-v0.6\
@@ -161,6 +162,7 @@ jobs:
         shell: cmd
         run: |
           set INTEL_OPENVINO_DIR=.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64
+          et OpenVINO_DIR=.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\runtime\cmake
           set PATH=.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\runtime\3rdparty\tbb\bin;.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\runtime\bin\intel64\Release;.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\runtime\bin\intel64\Debug;%PATH%
           set PYTHONPATH=.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\python;.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\python\python3
           python ./llm/cpp/convert_tokenizers.py ${{ github.workspace }}\build\thirdparty\openvino_contrib\modules\custom_operations\user_ie_extensions\Release\user_ov_extensions.dll .\TinyLlama-1.1B-Chat-v0.6\
