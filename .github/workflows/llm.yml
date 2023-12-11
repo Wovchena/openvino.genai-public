@@ -168,6 +168,7 @@ jobs:
           echo $GITHUB_WORKSPACE
           echo $OPENVINO_LIB_PATHS
           ls /c/hostedtoolcache/windows/Python/3.8.10/x64/Lib/site-packages/ov_tokenizer/libs/user_ov_extensions.dll
+          export PATH=/c/hostedtoolcache/windows/Python/3.8.10/x64/Lib/site-packages/ov_tokenizer/libs/:$PATH
           python ./llm/cpp/convert_tokenizers.py ./TinyLlama-1.1B-Chat-v0.6/
 
           ./build/llm/cpp/Release/llm ./TinyLlama-1.1B-Chat-v0.6/openvino_model.xml ./tokenizer.xml ./detokenizer.xml 69 > ./pred.txt
