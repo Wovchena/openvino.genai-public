@@ -26,7 +26,7 @@ jobs:
       - name: Install OpenVINO
         run: |
           mkdir ./ov/
-          curl https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2023.3.0-13432-a6ea22ad0e6/l_openvino_toolkit_ubuntu20_2023.3.0.dev20231129_x86_64.tgz | tar --directory ./ov/ --strip-components 1 -xz
+          curl https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2023.3.0-13570-402d251483c/l_openvino_toolkit_ubuntu20_2023.3.0.dev20231211_x86_64.tgz | tar --directory ./ov/ --strip-components 1 -xz
           sudo ./ov/install_dependencies/install_openvino_dependencies.sh
       - name: Download, convert and build
         run: |
@@ -140,15 +140,15 @@ jobs:
       - name: Install OpenVINO
         shell: bash
         run: |
-          curl --output ov.zip https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2023.3.0-13432-a6ea22ad0e6/w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64.zip
+          curl --output ov.zip https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2023.3.0-13570-402d251483c/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64.zip
           unzip ov.zip
       - name: Download, convert and build
         shell: bash
         run: |
-          export OpenVINO_DIR=$GITHUB_WORKSPACE/w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/cmake
-          export OPENVINO_LIB_PATHS=./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/3rdparty/tbb/bin:./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/bin/intel64/Release:./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/bin/intel64/Debug
+          export OpenVINO_DIR=$GITHUB_WORKSPACE/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/cmake
+          export OPENVINO_LIB_PATHS=./w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/3rdparty/tbb/bin:./w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/bin/intel64/Release:./w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/bin/intel64/Debug
           export PATH=$OPENVINO_LIB_PATHS:$PATH
-          export PYTHONPATH=./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/python:./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/python/python3
+          export PYTHONPATH=./w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/python:./w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/python/python3
           python -m pip install --upgrade-strategy eager "optimum[openvino]==1.14" ./thirdparty/openvino_contrib/modules/custom_operations/[transformers] --extra-index-url https://download.pytorch.org/whl/cpu && optimum-cli export openvino -m TinyLlama/TinyLlama-1.1B-Chat-v0.6 ./TinyLlama-1.1B-Chat-v0.6/ &
           mkdir ./build/
           cd ./build/
@@ -158,9 +158,9 @@ jobs:
       - name: Compare
         shell: cmd
         run: |
-          set OPENVINO_LIB_PATHS=.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\runtime\3rdparty\tbb\bin;.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\runtime\bin\intel64\Release;.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\runtime\bin\intel64\Debug
+          set OPENVINO_LIB_PATHS=.\w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64\runtime\3rdparty\tbb\bin;.\w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64\runtime\bin\intel64\Release;.\w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64\runtime\bin\intel64\Debug
           set PATH=%OPENVINO_LIB_PATHS%;%PATH%
-          set PYTHONPATH=.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\python;.\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\python\python3
+          set PYTHONPATH=.\w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64\python;.\w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64\python\python3
           python .\llm\cpp\convert_tokenizers.py ${{ github.workspace }}\build\thirdparty\openvino_contrib\modules\custom_operations\user_ie_extensions\Release\user_ov_extensions.dll .\TinyLlama-1.1B-Chat-v0.6\
 
           .\build\llm\cpp\Release\llm .\TinyLlama-1.1B-Chat-v0.6\openvino_model.xml .\tokenizer.xml .\detokenizer.xml 69 > .\pred.txt
