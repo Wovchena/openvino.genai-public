@@ -23,17 +23,15 @@ jobs:
           path: TinyLlama-1.1B-Chat-v0.6
           lfs: true
           github-server-url: https://huggingface.co
-      - name: Install dependencies
+      - name: Install OpenVINO
         run: |
           mkdir ./ov/
           curl https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2023.3.0-13432-a6ea22ad0e6/l_openvino_toolkit_ubuntu20_2023.3.0.dev20231129_x86_64.tgz | tar --directory ./ov/ --strip-components 1 -xz
           sudo ./ov/install_dependencies/install_openvino_dependencies.sh
-          source ./ov/setupvars.sh
-          python -m pip install --upgrade-strategy eager "optimum[openvino]>=1.14.0" ./thirdparty/openvino_contrib/modules/custom_operations/[transformers] --extra-index-url https://download.pytorch.org/whl/cpu
       - name: Download, convert and build
         run: |
           source ./ov/setupvars.sh
-          optimum-cli export openvino -m TinyLlama/TinyLlama-1.1B-Chat-v0.6 ./TinyLlama-1.1B-Chat-v0.6/ &
+          python -m pip install --upgrade-strategy eager "optimum[openvino]>=1.14.0" ./thirdparty/openvino_contrib/modules/custom_operations/[transformers] --extra-index-url https://download.pytorch.org/whl/cpu && optimum-cli export openvino -m TinyLlama/TinyLlama-1.1B-Chat-v0.6 ./TinyLlama-1.1B-Chat-v0.6/ &
           mkdir ./build/
           cd ./build/
           cmake -DCMAKE_BUILD_TYPE=Release ../
@@ -139,13 +137,13 @@ jobs:
           path: TinyLlama-1.1B-Chat-v0.6
           lfs: true
           github-server-url: https://huggingface.co
-      - name: Install dependencies
+      - name: Install OpenVINO
         shell: bash
         run: |
           curl --output ov.zip https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2023.3.0-13432-a6ea22ad0e6/w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64.zip
           unzip ov.zip
-          set OpenVINO_DIR=${{ github.workspace }}/w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/cmake
-          set PATH=./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/3rdparty/tbb/bin:./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/bin/intel64/Release:./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/bin/intel64\Debug:$PATH
+          export OpenVINO_DIR=${{ github.workspace }}/w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/cmake
+          export PATH=./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/3rdparty/tbb/bin:./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/bin/intel64/Release:./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/bin/intel64\Debug:$PATH
           python -m pip install --upgrade-strategy eager "optimum[openvino]>=1.14.0" ./thirdparty/openvino_contrib/modules/custom_operations/[transformers] --extra-index-url https://download.pytorch.org/whl/cpu
       - name: Download, convert and build
         shell: cmd
