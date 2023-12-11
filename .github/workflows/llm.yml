@@ -31,7 +31,7 @@ jobs:
       - name: Download, convert and build
         run: |
           source ./ov/setupvars.sh
-          python -m pip install --upgrade-strategy eager "optimum[openvino]>=1.14.0" ./thirdparty/openvino_contrib/modules/custom_operations/[transformers] --extra-index-url https://download.pytorch.org/whl/cpu && optimum-cli export openvino -m TinyLlama/TinyLlama-1.1B-Chat-v0.6 ./TinyLlama-1.1B-Chat-v0.6/ &
+          python -m pip install --upgrade-strategy eager "optimum[openvino]==1.14" ./thirdparty/openvino_contrib/modules/custom_operations/[transformers] --extra-index-url https://download.pytorch.org/whl/cpu && optimum-cli export openvino -m TinyLlama/TinyLlama-1.1B-Chat-v0.6 ./TinyLlama-1.1B-Chat-v0.6/ &
           mkdir ./build/
           cd ./build/
           cmake -DCMAKE_BUILD_TYPE=Release ../
@@ -129,7 +129,7 @@ jobs:
           submodules: recursive
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: 3.8
       - uses: actions/checkout@v4
         with:
           repository: TinyLlama/TinyLlama-1.1B-Chat-v0.6
@@ -149,7 +149,7 @@ jobs:
           export OPENVINO_LIB_PATHS=./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/3rdparty/tbb/bin:./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/bin/intel64/Release:./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/bin/intel64/Debug
           export PATH=$OPENVINO_LIB_PATHS:$PATH
           export PYTHONPATH=./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/python:./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/python/python3
-          python -m pip install --upgrade-strategy eager "optimum[openvino]>=1.14.0" ./thirdparty/openvino_contrib/modules/custom_operations/[transformers] --extra-index-url https://download.pytorch.org/whl/cpu && optimum-cli export openvino -m TinyLlama/TinyLlama-1.1B-Chat-v0.6 ./TinyLlama-1.1B-Chat-v0.6/ &
+          python -m pip install --upgrade-strategy eager "optimum[openvino]==1.14" ./thirdparty/openvino_contrib/modules/custom_operations/[transformers] --extra-index-url https://download.pytorch.org/whl/cpu && optimum-cli export openvino -m TinyLlama/TinyLlama-1.1B-Chat-v0.6 ./TinyLlama-1.1B-Chat-v0.6/ &
           mkdir ./build/
           cd ./build/
           cmake -DCMAKE_BUILD_TYPE=Release ../
