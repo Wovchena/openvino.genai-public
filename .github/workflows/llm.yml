@@ -146,7 +146,7 @@ jobs:
           unzip ov.zip
           set OpenVINO_DIR=${{ github.workspace }}/w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/cmake
           set PATH=./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/3rdparty/tbb/bin:./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/bin/intel64/Release:./w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64/runtime/bin/intel64\Debug:$PATH
-          python -m pip install --upgrade-strategy eager "optimum[openvino]>=1.14.0" .\thirdparty\openvino_contrib\modules\custom_operations\[transformers] --extra-index-url https://download.pytorch.org/whl/cpu
+          python -m pip install --upgrade-strategy eager "optimum[openvino]>=1.14.0" ./thirdparty/openvino_contrib/modules/custom_operations/[transformers] --extra-index-url https://download.pytorch.org/whl/cpu
       - name: Download, convert and build
         shell: cmd
         run: |
