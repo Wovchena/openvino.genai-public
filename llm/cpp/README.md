@@ -33,7 +33,7 @@ The program loads a model a tokenizer, and a detokenizer (`.xml` and `.bin`) to 
 
 ```sh
 source <OpenVINO dir>/setupvars.sh
-python -m pip install --upgrade-strategy eager "optimum[openvino]==1.14" thirdparty/openvino_contrib/modules/custom_operations/[transformers] --extra-index-url https://download.pytorch.org/whl/cpu
+python -m pip install --upgrade-strategy eager "optimum[openvino]>=1.15" thirdparty/openvino_contrib/modules/custom_operations/[transformers] --extra-index-url https://download.pytorch.org/whl/cpu
 optimum-cli export openvino -m meta-llama/Llama-2-7b-hf ./Llama-2-7b-hf/
 python ./llm/cpp/convert_tokenizers.py ./build/thirdparty/openvino_contrib/modules/custom_operations/user_ie_extensions/libuser_ov_extensions.so ./Llama-2-7b-hf/
 ```
