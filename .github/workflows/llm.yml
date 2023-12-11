@@ -51,7 +51,7 @@ jobs:
               predictions = file.read()
           tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
           input_ids = tokenizer('69', return_tensors='pt')['input_ids']
-          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9):
+          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
               ref = ': ' + tokenizer.decode(beam[input_ids.numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
@@ -67,7 +67,7 @@ jobs:
               predictions = file.read()
           tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
           input_ids = tokenizer('Hi', return_tensors='pt')['input_ids']
-          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9):
+          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
               ref = ': ' + tokenizer.decode(beam[input_ids.numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
@@ -83,7 +83,7 @@ jobs:
               predictions = file.read()
           tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
           input_ids = tokenizer('return 0', return_tensors='pt')['input_ids']
-          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9):
+          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
               ref = ': ' + tokenizer.decode(beam[input_ids.numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
@@ -99,7 +99,7 @@ jobs:
               predictions = file.read()
           tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
           input_ids = tokenizer('', return_tensors='pt')['input_ids']
-          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9):
+          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
               ref = ': ' + tokenizer.decode(beam[input_ids.numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
@@ -115,7 +115,7 @@ jobs:
               predictions = file.read()
           tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
           input_ids = tokenizer('你好！ 你好嗎？', return_tensors='pt')['input_ids']
-          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9):
+          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
               ref = ': ' + tokenizer.decode(beam[input_ids.numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
@@ -161,7 +161,7 @@ jobs:
         shell: bash
         run: |
           export OPENVINO_LIB_PATHS=$GITHUB_WORKSPACE/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/3rdparty/tbb/bin\;$GITHUB_WORKSPACE/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/bin/intel64/Release
-          export PATH=$OPENVINO_LIB_PATHS:$PATH
+          export PATH=$PWD/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/3rdparty/tbb/bin:$PWD/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/bin/intel64/Release:$PATH
           export PYTHONPATH=./w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/python:./w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/python/python3
           export OV_TOKENIZER_PREBUILD_EXTENSION_PATH=/c/hostedtoolcache/windows/Python/3.8.10/x64/Lib/site-packages/ov_tokenizer/libs/user_ov_extensions.dll
           pwd
@@ -178,7 +178,7 @@ jobs:
               predictions = file.read()
           tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
           input_ids = tokenizer('69', return_tensors='pt')['input_ids']
-          for beam in transformers.LlamaForCausalLM.from_pretrained(r'./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9):
+          for beam in transformers.LlamaForCausalLM.from_pretrained(r'./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
               ref = ': ' + tokenizer.decode(beam[input_ids.numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
