@@ -149,11 +149,18 @@ jobs:
       - name: Download, convert and build
         shell: cmd
         run: |
+          echo AAAAA
           .\w_openvino_toolkit_windows_2023.3.0.dev20231129_x86_64\setupvars.bat
+          echo %errorlevel%
+          echo BBBBB
           optimum-cli export openvino -m TinyLlama/TinyLlama-1.1B-Chat-v0.6 .\TinyLlama-1.1B-Chat-v0.6\
+          echo CCCC
           mkdir .\build\
+          echo DDDDD
           cd .\build\
+          echo EEEEE
           cmake -DCMAKE_BUILD_TYPE=Release ..\
+          echo FFFF
           cmake --build .\ --config Release -j
       - name: Compare
         shell: cmd
