@@ -11,7 +11,7 @@ add_subdirectory(../../thirdparty/openvino_contrib/modules/custom_operations/ "$
 add_executable(llm llm.cpp)
 target_include_directories(llm PRIVATE ./)
 find_package(OpenVINO REQUIRED COMPONENTS Runtime)
-target_link_libraries(llm PRIVATE openvino::runtime)
+target_link_libraries(llm PRIVATE openvino::runtime user_ov_extensions)
 set_target_properties(llm PROPERTIES CXX_STANDARD 17)
 set_target_properties(llm PROPERTIES CXX_STANDARD_REQUIRED ON)
 if(MSVC)
