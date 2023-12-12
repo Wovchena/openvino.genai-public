@@ -9,7 +9,7 @@ list(APPEND CUSTOM_OPERATIONS tokenizer)
 add_subdirectory(../../thirdparty/openvino_contrib/modules/custom_operations/ "${CMAKE_CURRENT_BINARY_DIR}/custom_operations/")
 
 add_executable(llm llm.cpp)
-target_compile_definitions(casual_lm PRIVATE USER_OV_EXTENSIONS_PATH=\"$<TARGET_FILE:user_ov_extensions>\")
+target_compile_definitions(llm PRIVATE USER_OV_EXTENSIONS_PATH=\"$<TARGET_FILE:user_ov_extensions>\")
 target_include_directories(llm PRIVATE ./)
 find_package(OpenVINO REQUIRED COMPONENTS Runtime)
 target_link_libraries(llm PRIVATE openvino::runtime user_ov_extensions)
