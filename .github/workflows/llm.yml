@@ -66,7 +66,7 @@ jobs:
           with open('pred.txt', 'r') as file:
               predictions = file.read()
           tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
-          tokenized = tokenizer('69', return_tensors='pt')
+          tokenized = tokenizer('Hi', return_tensors='pt')
           for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
               ref = ': ' + tokenizer.decode(beam[tokenized['input_ids'].numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
@@ -158,30 +158,33 @@ jobs:
           cmake --build ./ --config Release -j
           wait
       - name: Compare
-        shell: bash
+        shell: cmd
         run: |
-          export OPENVINO_LIB_PATHS=$GITHUB_WORKSPACE/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/3rdparty/tbb/bin\;$GITHUB_WORKSPACE/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/bin/intel64/Release
-          export PATH=$PWD/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/3rdparty/tbb/bin:$PWD/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/bin/intel64/Release:$PATH
-          export PYTHONPATH=./w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/python:./w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/python/python3
-          export OV_TOKENIZER_PREBUILD_EXTENSION_PATH=/c/hostedtoolcache/windows/Python/3.8.10/x64/Lib/site-packages/ov_tokenizer/libs/user_ov_extensions.dll
-          pwd
-          echo $GITHUB_WORKSPACE
-          echo $OPENVINO_LIB_PATHS
-          ls /c/hostedtoolcache/windows/Python/3.8.10/x64/Lib/site-packages/ov_tokenizer/libs/user_ov_extensions.dll
-          export PATH=/c/hostedtoolcache/windows/Python/3.8.10/x64/Lib/site-packages/ov_tokenizer/libs/:$PATH
-          python ./llm/cpp/convert_tokenizers.py ./TinyLlama-1.1B-Chat-v0.6/
+          call w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64\setupvars.bat
+          echo %errorlevel%
+          echo %PATH%
+# export OPENVINO_LIB_PATHS=$GITHUB_WORKSPACE/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/3rdparty/tbb/bin\;$GITHUB_WORKSPACE/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/bin/intel64/Release
+# export PATH=$PWD/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/3rdparty/tbb/bin:$PWD/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/bin/intel64/Release:$PATH
+# export PYTHONPATH=./w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/python:./w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/python/python3
+# export OV_TOKENIZER_PREBUILD_EXTENSION_PATH=/c/hostedtoolcache/windows/Python/3.8.10/x64/Lib/site-packages/ov_tokenizer/libs/user_ov_extensions.dll
+# pwd
+# echo $GITHUB_WORKSPACE
+# echo $OPENVINO_LIB_PATHS
+# ls /c/hostedtoolcache/windows/Python/3.8.10/x64/Lib/site-packages/ov_tokenizer/libs/user_ov_extensions.dll
+# export PATH=/c/hostedtoolcache/windows/Python/3.8.10/x64/Lib/site-packages/ov_tokenizer/libs/:$PATH
+# python ./llm/cpp/convert_tokenizers.py ./TinyLlama-1.1B-Chat-v0.6/
 
-          ./build/llm/cpp/Release/llm ./TinyLlama-1.1B-Chat-v0.6/openvino_model.xml ./tokenizer.xml ./detokenizer.xml 69 > ./pred.txt
-          python -c "
-          import transformers
-          with open('pred.txt', 'r') as file:
-              predictions = file.read()
-          tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
-          tokenized = tokenizer('69', return_tensors='pt')
-          for beam in transformers.LlamaForCausalLM.from_pretrained(r'./TinyLlama-1.1B-Chat-v0.6/').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
-              ref = ': ' + tokenizer.decode(beam[tokenized['input_ids'].numel():], skip_special_tokens=True) + '\n'
-              idx = predictions.find(ref)
-              if -1 == idx:
-                  raise RuntimeError(f'Missing "{ref=}" from predictions')
-              predictions = predictions[:idx] + predictions[idx + len(ref):]
-          "
+# ./build/llm/cpp/Release/llm ./TinyLlama-1.1B-Chat-v0.6/openvino_model.xml ./tokenizer.xml ./detokenizer.xml 69 > ./pred.txt
+# python -c "
+# import transformers
+# with open('pred.txt', 'r') as file:
+#     predictions = file.read()
+# tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
+# tokenized = tokenizer('69', return_tensors='pt')
+# for beam in transformers.LlamaForCausalLM.from_pretrained(r'./TinyLlama-1.1B-Chat-v0.6/').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
+#     ref = ': ' + tokenizer.decode(beam[tokenized['input_ids'].numel():], skip_special_tokens=True) + '\n'
+#     idx = predictions.find(ref)
+#     if -1 == idx:
+#         raise RuntimeError(f'Missing "{ref=}" from predictions')
+#     predictions = predictions[:idx] + predictions[idx + len(ref):]
+# "
