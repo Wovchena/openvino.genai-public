@@ -40,7 +40,7 @@ jobs:
           source ./ov/setupvars.sh
           python ./llm/cpp/convert_tokenizers.py ./TinyLlama-1.1B-Chat-v0.6/
 
-          timeout 25s ./build/llm/cpp/llm ./TinyLlama-1.1B-Chat-v0.6/openvino_model.xml ./tokenizer.xml ./detokenizer.xml 69 > ./pred.txt
+          timeout 25s ./build/llm ./TinyLlama-1.1B-Chat-v0.6/openvino_model.xml ./tokenizer.xml ./detokenizer.xml 69 > ./pred.txt
           python -c "
           import transformers
           with open('pred.txt', 'r') as file:
@@ -56,7 +56,7 @@ jobs:
           "
           echo 69 passed
 
-          timeout 25s ./build/llm/cpp/llm ./TinyLlama-1.1B-Chat-v0.6/openvino_model.xml ./tokenizer.xml ./detokenizer.xml Hi > ./pred.txt
+          timeout 25s ./build/llm ./TinyLlama-1.1B-Chat-v0.6/openvino_model.xml ./tokenizer.xml ./detokenizer.xml Hi > ./pred.txt
           python -c "
           import transformers
           with open('pred.txt', 'r') as file:
@@ -72,7 +72,7 @@ jobs:
           "
           echo Hi passed
 
-          timeout 25s ./build/llm/cpp/llm ./TinyLlama-1.1B-Chat-v0.6/openvino_model.xml ./tokenizer.xml ./detokenizer.xml "return 0" > ./pred.txt
+          timeout 25s ./build/llm ./TinyLlama-1.1B-Chat-v0.6/openvino_model.xml ./tokenizer.xml ./detokenizer.xml "return 0" > ./pred.txt
           python -c "
           import transformers
           with open('pred.txt', 'r') as file:
@@ -88,7 +88,7 @@ jobs:
           "
           echo return 0 passed
 
-          ./build/llm/cpp/llm ./TinyLlama-1.1B-Chat-v0.6/openvino_model.xml ./tokenizer.xml ./detokenizer.xml "" > ./pred.txt
+          ./build/llm ./TinyLlama-1.1B-Chat-v0.6/openvino_model.xml ./tokenizer.xml ./detokenizer.xml "" > ./pred.txt
           python -c "
           import transformers
           with open('pred.txt', 'r') as file:
@@ -104,7 +104,7 @@ jobs:
           "
           echo '""' passed
 
-          ./build/llm/cpp/llm ./TinyLlama-1.1B-Chat-v0.6/openvino_model.xml ./tokenizer.xml ./detokenizer.xml "你好！ 你好嗎？" > ./pred.txt
+          ./build/llm ./TinyLlama-1.1B-Chat-v0.6/openvino_model.xml ./tokenizer.xml ./detokenizer.xml "你好！ 你好嗎？" > ./pred.txt
           python -c "
           import transformers
           with open('pred.txt', 'r') as file:
@@ -157,7 +157,7 @@ jobs:
           call w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64\setupvars.bat
           python .\llm\cpp\convert_tokenizers.py .\TinyLlama-1.1B-Chat-v0.6\
 
-          .\build\llm\cpp\Release\llm.exe .\TinyLlama-1.1B-Chat-v0.6\openvino_model.xml .\tokenizer.xml .\detokenizer.xml 69 > .\pred.txt
+          .\build\Release\llm.exe .\TinyLlama-1.1B-Chat-v0.6\openvino_model.xml .\tokenizer.xml .\detokenizer.xml 69 > .\pred.txt
           echo import transformers > ref.py
           echo predictions = open('pred.txt', 'r').read() >> ref.py
           echo tokenizer = transformers.LlamaTokenizer.from_pretrained(r'.\TinyLlama-1.1B-Chat-v0.6') >> ref.py
