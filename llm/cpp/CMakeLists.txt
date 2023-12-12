@@ -1,6 +1,13 @@
 # Copyright (C) 2023 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
+cmake_minimum_required(VERSION 3.15)
+project(llm)
+
+# Build user_ov_extensions
+list(APPEND CUSTOM_OPERATIONS tokenizer)
+add_subdirectory(../../thirdparty/openvino_contrib/modules/custom_operations/ "${CMAKE_CURRENT_BINARY_DIR}/custom_operations/")
+
 add_executable(llm llm.cpp)
 target_include_directories(llm PRIVATE ./)
 find_package(OpenVINO REQUIRED COMPONENTS Runtime)
