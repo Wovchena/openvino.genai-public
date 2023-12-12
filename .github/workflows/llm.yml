@@ -5,7 +5,7 @@ on:
       - llm/cpp/**
       - '!llm/cpp/README.md'
       - .github/workflows/llm.yml
-      - thirdparty/**
+      - thirdparty/openvino_contrib/
 jobs:
   llm-cpp:
     runs-on: ubuntu-20.04
