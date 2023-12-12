@@ -81,13 +81,13 @@ enum class StopCriteria {early, heuristic, never};
 
 struct Parameters {
     std::vector<int64_t> prompt;
-    size_t n_groups = 3;
-    size_t group_size = 5;
+    size_t n_groups = 9;
+    size_t group_size = 11;
     float diversity_penalty = 1.0;
-    size_t max_new_tokens = 20;
-    StopCriteria stop_criteria = StopCriteria::heuristic;
+    size_t max_new_tokens = 25;
+    StopCriteria stop_criteria = StopCriteria::early;
     float length_penalty = 1.0;
-    size_t no_repeat_ngram_size = std::numeric_limits<size_t>::max();
+    size_t no_repeat_ngram_size = 3;
     // There's no way to extract special token values from the tokenizer for now
     int64_t eos_token = 2;
     int64_t pad_token = 0;
@@ -99,7 +99,7 @@ struct Group {
     std::vector<Beam> min_heap;  // The worst of the best completed beams is the first
     bool done = false;
     void finish(Beam&& beam, const Parameters& parameters) {
-        beam.score /= std::pow(float(beam.tokens.size()), parameters.length_penalty);
+        beam.score /= std::pow(float(parameters.prompt.size() + beam.tokens.size()), parameters.length_penalty);
         min_heap.push_back(std::move(beam));
         std::push_heap(min_heap.begin(), min_heap.end(), greater);
         if (min_heap.size() > parameters.group_size) {
@@ -111,7 +111,7 @@ struct Group {
         if (min_heap.size() < parameters.group_size) {
             return;
         }
-        size_t cur_len = ongoing.front().tokens.size();
+        size_t cur_len = parameters.prompt.size() + ongoing.front().tokens.size();
         float best_sum_logprobs = ongoing.front().score;
         float worst_score = min_heap.front().score;
         switch (parameters.stop_criteria) {
@@ -169,7 +169,7 @@ struct GroupBeamSearcher {
                 for (Beam& beam : group->ongoing) {
                     // pad_token addition affects how diversity_penalty is applyed.
                     // Required to stay aligned with Python transformers implementation
-                    beam.tokens.push_back(parameters.pad_token);
+                    // beam.tokens.push_back(parameters.pad_token);
                 }
                 continue;
             }
@@ -179,7 +179,9 @@ struct GroupBeamSearcher {
                 std::vector<Token> tokens = log_softmax(logits, beam.global_beam_idx);
                 for (auto prev_group = groups.begin(); prev_group != group; ++prev_group) {
                     for (const Beam& prev_beam : prev_group->ongoing) {
+                        if (prev_beam.tokens.size() > beam.tokens.size()) {
                         tokens.at(size_t(prev_beam.tokens.back())).log_prob -= parameters.diversity_penalty;
+                        }
                     }
                 }
                 std::vector<int64_t> full_text{parameters.prompt};
