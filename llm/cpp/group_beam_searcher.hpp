@@ -81,16 +81,15 @@ enum class StopCriteria {early, heuristic, never};
 
 struct Parameters {
     std::vector<int64_t> prompt;
-    size_t n_groups = 9;
-    size_t group_size = 11;
+    size_t n_groups = 3;
+    size_t group_size = 5;
     float diversity_penalty = 1.0;
-    size_t max_new_tokens = 25;
-    StopCriteria stop_criteria = StopCriteria::early;
+    size_t max_new_tokens = 20;
+    StopCriteria stop_criteria = StopCriteria::heuristic;
     float length_penalty = 1.0;
-    size_t no_repeat_ngram_size = 3;
+    size_t no_repeat_ngram_size = std::numeric_limits<size_t>::max();
     // There's no way to extract special token values from the tokenizer for now
     int64_t eos_token = 2;
-    int64_t pad_token = 0;
     std::function<bool(const Beam&)> early_finish = [](const Beam&){return false;};
 };
 
@@ -166,11 +165,6 @@ struct GroupBeamSearcher {
         }
         for (auto group = groups.begin(); group != groups.end(); ++group) {
             if (group->done) {
-                for (Beam& beam : group->ongoing) {
-                    // pad_token addition affects how diversity_penalty is applyed.
-                    // Required to stay aligned with Python transformers implementation
-                    // beam.tokens.push_back(parameters.pad_token);
-                }
                 continue;
             }
             std::vector<Beam> candidates;
@@ -180,7 +174,7 @@ struct GroupBeamSearcher {
                 for (auto prev_group = groups.begin(); prev_group != group; ++prev_group) {
                     for (const Beam& prev_beam : prev_group->ongoing) {
                         if (prev_beam.tokens.size() > beam.tokens.size()) {
-                        tokens.at(size_t(prev_beam.tokens.back())).log_prob -= parameters.diversity_penalty;
+                            tokens.at(size_t(prev_beam.tokens.back())).log_prob -= parameters.diversity_penalty;
                         }
                     }
                 }

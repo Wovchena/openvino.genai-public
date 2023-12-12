@@ -29,7 +29,7 @@ jobs:
           curl https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2023.3.0-13432-a6ea22ad0e6/l_openvino_toolkit_ubuntu20_2023.3.0.dev20231129_x86_64.tgz | tar --directory ./ov/ --strip-components 1 -xz
           sudo ./ov/install_dependencies/install_openvino_dependencies.sh
           source ./ov/setupvars.sh
-          python -m pip install --upgrade-strategy eager "optimum[openvino]>=1.14" ./thirdparty/openvino_contrib/modules/custom_operations/[transformers] --extra-index-url https://download.pytorch.org/whl/cpu && python -m pip uninstall --yes optimum-intel && python -m pip install git+https://github.com/huggingface/optimum-intel.git@5dac93d6e8d15c96fe061c653d82b7afd54954db
+          python -m pip install --upgrade-strategy eager transformers==4.35.2 "optimum[openvino]>=1.14" ./thirdparty/openvino_contrib/modules/custom_operations/[transformers] --extra-index-url https://download.pytorch.org/whl/cpu && python -m pip uninstall --yes optimum-intel && python -m pip install git+https://github.com/huggingface/optimum-intel.git@5dac93d6e8d15c96fe061c653d82b7afd54954db
       - name: Download, convert and build
         run: |
           source ./ov/setupvars.sh
@@ -50,9 +50,9 @@ jobs:
           with open('pred.txt', 'r') as file:
               predictions = file.read()
           tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
-          input_ids = tokenizer('69', return_tensors='pt')['input_ids']
-          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
-              ref = ': ' + tokenizer.decode(beam[input_ids.numel():], skip_special_tokens=True) + '\n'
+          tokenized = tokenizer('69', return_tensors='pt')
+          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
+              ref = ': ' + tokenizer.decode(beam[tokenized['input_ids'].numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
                   raise RuntimeError(f'Missing "{ref=}" from predictions')
@@ -66,9 +66,9 @@ jobs:
           with open('pred.txt', 'r') as file:
               predictions = file.read()
           tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
-          input_ids = tokenizer('Hi', return_tensors='pt')['input_ids']
-          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
-              ref = ': ' + tokenizer.decode(beam[input_ids.numel():], skip_special_tokens=True) + '\n'
+          tokenized = tokenizer('69', return_tensors='pt')
+          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
+              ref = ': ' + tokenizer.decode(beam[tokenized['input_ids'].numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
                   raise RuntimeError(f'Missing "{ref=}" from predictions')
@@ -82,9 +82,9 @@ jobs:
           with open('pred.txt', 'r') as file:
               predictions = file.read()
           tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
-          input_ids = tokenizer('return 0', return_tensors='pt')['input_ids']
-          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
-              ref = ': ' + tokenizer.decode(beam[input_ids.numel():], skip_special_tokens=True) + '\n'
+          tokenized = tokenizer('return 0', return_tensors='pt')
+          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
+              ref = ': ' + tokenizer.decode(beam[tokenized['input_ids'].numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
                   raise RuntimeError(f'Missing "{ref=}" from predictions')
@@ -98,9 +98,9 @@ jobs:
           with open('pred.txt', 'r') as file:
               predictions = file.read()
           tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
-          input_ids = tokenizer('', return_tensors='pt')['input_ids']
-          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
-              ref = ': ' + tokenizer.decode(beam[input_ids.numel():], skip_special_tokens=True) + '\n'
+          tokenized = tokenizer('', return_tensors='pt')
+          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
+              ref = ': ' + tokenizer.decode(beam[tokenized['input_ids'].numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
                   raise RuntimeError(f'Missing "{ref=}" from predictions')
@@ -114,9 +114,9 @@ jobs:
           with open('pred.txt', 'r') as file:
               predictions = file.read()
           tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
-          input_ids = tokenizer('你好！ 你好嗎？', return_tensors='pt')['input_ids']
-          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
-              ref = ': ' + tokenizer.decode(beam[input_ids.numel():], skip_special_tokens=True) + '\n'
+          tokenized = tokenizer('你好！ 你好嗎？', return_tensors='pt')
+          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
+              ref = ': ' + tokenizer.decode(beam[tokenized['input_ids'].numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
                   raise RuntimeError(f'Missing "{ref=}" from predictions')
@@ -151,7 +151,7 @@ jobs:
           export OPENVINO_LIB_PATHS=$GITHUB_WORKSPACE/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/3rdparty/tbb/bin\;$GITHUB_WORKSPACE/w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/runtime/bin/intel64/Release
           export PATH=$OPENVINO_LIB_PATHS:$PATH
           export PYTHONPATH=./w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/python:./w_openvino_toolkit_windows_2023.3.0.dev20231211_x86_64/python/python3
-          python -m pip install --upgrade-strategy eager "optimum[openvino]>=1.14" ./thirdparty/openvino_contrib/modules/custom_operations/[transformers] --extra-index-url https://download.pytorch.org/whl/cpu && python -m pip uninstall --yes optimum-intel && python -m pip install git+https://github.com/huggingface/optimum-intel.git@5dac93d6e8d15c96fe061c653d82b7afd54954db && optimum-cli export openvino -m TinyLlama/TinyLlama-1.1B-Chat-v0.6 ./TinyLlama-1.1B-Chat-v0.6/ &
+          python -m pip install --upgrade-strategy eager transformers==4.35.2 "optimum[openvino]>=1.14" ./thirdparty/openvino_contrib/modules/custom_operations/[transformers] --extra-index-url https://download.pytorch.org/whl/cpu && python -m pip uninstall --yes optimum-intel && python -m pip install git+https://github.com/huggingface/optimum-intel.git@5dac93d6e8d15c96fe061c653d82b7afd54954db && optimum-cli export openvino -m TinyLlama/TinyLlama-1.1B-Chat-v0.6 ./TinyLlama-1.1B-Chat-v0.6/ &
           mkdir ./build/
           cd ./build/
           cmake -DCMAKE_BUILD_TYPE=Release ../
@@ -177,9 +177,9 @@ jobs:
           with open('pred.txt', 'r') as file:
               predictions = file.read()
           tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
-          input_ids = tokenizer('69', return_tensors='pt')['input_ids']
-          for beam in transformers.LlamaForCausalLM.from_pretrained(r'./TinyLlama-1.1B-Chat-v0.6/').generate(input_ids, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
-              ref = ': ' + tokenizer.decode(beam[input_ids.numel():], skip_special_tokens=True) + '\n'
+          tokenized = tokenizer('69', return_tensors='pt')
+          for beam in transformers.LlamaForCausalLM.from_pretrained(r'./TinyLlama-1.1B-Chat-v0.6/').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
+              ref = ': ' + tokenizer.decode(beam[tokenized['input_ids'].numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
                   raise RuntimeError(f'Missing "{ref=}" from predictions')
