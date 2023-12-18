@@ -51,9 +51,9 @@ jobs:
           # import transformers
           # with open('pred.txt', 'r') as file:
           #     predictions = file.read()
-          # tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
+          # tokenizer = transformers.LlamaTokenizer.from_pretrained('TinyLlama/TinyLlama-1.1B-Chat-v0.6')
           # tokenized = tokenizer('Why is the Sun yellow?', return_tensors='pt')
-          # for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
+          # for beam in transformers.LlamaForCausalLM.from_pretrained('TinyLlama/TinyLlama-1.1B-Chat-v0.6').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
           #     ref = ': ' + tokenizer.decode(beam[tokenized['input_ids'].numel():], skip_special_tokens=True) + '\n'
           #     idx = predictions.find(ref)
           #     if -1 == idx:
@@ -67,9 +67,9 @@ jobs:
           import transformers
           with open('pred.txt', 'r') as file:
               predictions = file.read()
-          tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
+          tokenizer = transformers.LlamaTokenizer.from_pretrained('TinyLlama/TinyLlama-1.1B-Chat-v0.6')
           tokenized = tokenizer('69', return_tensors='pt')
-          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
+          for beam in transformers.LlamaForCausalLM.from_pretrained('TinyLlama/TinyLlama-1.1B-Chat-v0.6').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
               ref = ': ' + tokenizer.decode(beam[tokenized['input_ids'].numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
@@ -83,9 +83,9 @@ jobs:
           import transformers
           with open('pred.txt', 'r') as file:
               predictions = file.read()
-          tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
+          tokenizer = transformers.LlamaTokenizer.from_pretrained('TinyLlama/TinyLlama-1.1B-Chat-v0.6')
           tokenized = tokenizer('Hi', return_tensors='pt')
-          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
+          for beam in transformers.LlamaForCausalLM.from_pretrained('TinyLlama/TinyLlama-1.1B-Chat-v0.6').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
               ref = ': ' + tokenizer.decode(beam[tokenized['input_ids'].numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
@@ -99,9 +99,9 @@ jobs:
           import transformers
           with open('pred.txt', 'r') as file:
               predictions = file.read()
-          tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
+          tokenizer = transformers.LlamaTokenizer.from_pretrained('TinyLlama/TinyLlama-1.1B-Chat-v0.6')
           tokenized = tokenizer('return 0', return_tensors='pt')
-          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
+          for beam in transformers.LlamaForCausalLM.from_pretrained('TinyLlama/TinyLlama-1.1B-Chat-v0.6').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
               ref = ': ' + tokenizer.decode(beam[tokenized['input_ids'].numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
@@ -115,9 +115,9 @@ jobs:
           import transformers
           with open('pred.txt', 'r') as file:
               predictions = file.read()
-          tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
+          tokenizer = transformers.LlamaTokenizer.from_pretrained('TinyLlama/TinyLlama-1.1B-Chat-v0.6')
           tokenized = tokenizer('', return_tensors='pt')
-          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
+          for beam in transformers.LlamaForCausalLM.from_pretrained('TinyLlama/TinyLlama-1.1B-Chat-v0.6').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
               ref = ': ' + tokenizer.decode(beam[tokenized['input_ids'].numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
@@ -131,9 +131,9 @@ jobs:
           import transformers
           with open('pred.txt', 'r') as file:
               predictions = file.read()
-          tokenizer = transformers.LlamaTokenizer.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/')
+          tokenizer = transformers.LlamaTokenizer.from_pretrained('TinyLlama/TinyLlama-1.1B-Chat-v0.6')
           tokenized = tokenizer('你好！ 你好嗎？', return_tensors='pt')
-          for beam in transformers.LlamaForCausalLM.from_pretrained('./TinyLlama-1.1B-Chat-v0.6/').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
+          for beam in transformers.LlamaForCausalLM.from_pretrained('TinyLlama/TinyLlama-1.1B-Chat-v0.6').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False):
               ref = ': ' + tokenizer.decode(beam[tokenized['input_ids'].numel():], skip_special_tokens=True) + '\n'
               idx = predictions.find(ref)
               if -1 == idx:
@@ -183,9 +183,9 @@ jobs:
           .\build\Release\beam_search_causal_lm.exe .\TinyLlama-1.1B-Chat-v0.6\pytorch\dldt\FP16\ "Why is the Sun yellow?" > .\pred.txt
           echo import transformers > ref.py
           echo predictions = open('pred.txt', 'r').read() >> ref.py
-          echo tokenizer = transformers.LlamaTokenizer.from_pretrained(r'.\TinyLlama-1.1B-Chat-v0.6') >> ref.py
+          echo tokenizer = transformers.LlamaTokenizer.from_pretrained('TinyLlama/TinyLlama-1.1B-Chat-v0.6') >> ref.py
           echo tokenized = tokenizer('Why is the Sun yellow?', return_tensors='pt') >> ref.py
-          echo for beam in transformers.LlamaForCausalLM.from_pretrained(r'.\TinyLlama-1.1B-Chat-v0.6').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False): >> ref.py
+          echo for beam in transformers.LlamaForCausalLM.from_pretrained('TinyLlama/TinyLlama-1.1B-Chat-v0.6').generate(**tokenized, num_beam_groups=3, num_beams=15, num_return_sequences=15, diversity_penalty=1.0, max_new_tokens=20, early_stopping=False, length_penalty=1.0, no_repeat_ngram_size=9**9, do_sample=False): >> ref.py
           echo     ref = ': ' + tokenizer.decode(beam[tokenized['input_ids'].numel():], skip_special_tokens=True) + '\n' >> ref.py
           echo     idx = predictions.find(ref) >> ref.py
           echo     if -1 == idx: >> ref.py
