@@ -2,15 +2,16 @@ name: causal_lm_cpp
 on:
   pull_request:
     paths:
-      - text_generation/causal_lm/cpp/**
-      - '!text_generation/causal_lm/cpp/README.md'
+      - text_generation/causal_lm/cpp/*
+      - llm_bench/python/**
       - thirdparty/openvino_contrib
       - .github/workflows/causal_lm_cpp.yml
+      - '!**.md'
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  causal_lm_cpp:
+  cpp-greedy_causal_lm-ubuntu:
     runs-on: ubuntu-20.04-8-cores
     steps:
       - uses: actions/checkout@v4
