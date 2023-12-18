@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) try {
         throw std::runtime_error(std::string{"Usage: "} + argv[0] + " <MODEL_DIR> '<PROMPT>'");
     }
     auto [lm, tokenizer, detokenizer] = compile_models(argv[1]);
-    auto [input_ids, attention_mask] = tokenize(tokenizer, argv[4]);
+    auto [input_ids, attention_mask] = tokenize(tokenizer, argv[2]);
     initialize_inputs(lm, input_ids, attention_mask);
     const int64_t* prompt_data = input_ids.data<const int64_t>();
     Parameters parameters{std::vector<int64_t>{prompt_data, prompt_data + input_ids.get_size()}};

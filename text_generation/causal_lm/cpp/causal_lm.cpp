@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) try {
     core.add_extension(USER_OV_EXTENSIONS_PATH);  // USER_OV_EXTENSIONS_PATH is defined in CMakeLists.txt
     ov::InferRequest tokenizer = core.compile_model(
         std::string{argv[2]} + "/openvino_tokenizer.xml", "CPU").create_infer_request();
-    auto [input_ids, attention_mask] = tokenize(tokenizer, argv[4]);
+    auto [input_ids, attention_mask] = tokenize(tokenizer, argv[2]);
     ov::InferRequest detokenizer = core.compile_model(
         std::string{argv[3]} + "/openvino_detokenizer.xml", "CPU").create_infer_request();
     std::shared_ptr<ov::Model> model = core.read_model(std::string{argv[1]} + "/openvino_model.xml");
