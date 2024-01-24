@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2018-2023 Intel Corporation
+# Copyright (C) 2023-2024 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 import csv
 from pathlib import Path
@@ -36,6 +36,8 @@ def output_comments(result, use_case, writer):
         comment_list.append('1st_infer_latency: Same as 1st_latency')
         comment_list.append('2nd_infer_avg_latency: Same as 2nd_avg_latency')
         comment_list.append('prompt_idx: Image Index')
+    comment_list.append('tokenization_time: Tokenizer encode time')
+    comment_list.append('detokenization_time: Tokenizer decode time')
     comment_list.append('pretrain_time: Total time of load model and compile model')
     comment_list.append('generation_time: Time for one interaction. (e.g. The duration of  answering one question or generating one picture)')
     comment_list.append('iteration=0: warm-up; iteration=-1: average (exclude warm-up)')
@@ -74,6 +76,8 @@ def write_result(report_file, model, framework, device, model_args, iter_data_li
         '2nd_infer_avg_latency(ms)',
         'num_beams',
         'batch_size',
+        'tokenization_time',
+        'detokenization_time',
         'result_md5',
     ]
     out_file = Path(report_file)
@@ -114,6 +118,8 @@ def write_result(report_file, model, framework, device, model_args, iter_data_li
                 other_token_infer_latency = iter_data['other_tokens_infer_avg_latency']
                 rss_mem = iter_data['max_rss_mem_consumption']
                 shared_mem = iter_data['max_shared_mem_consumption']
+                token_time = iter_data['tokenization_time']
+                detoken_time = iter_data['detokenization_time']
                 result['iteration'] = str(iter_data['iteration'])
                 if i > 0:
                     result['pretrain_time(s)'] = ''
@@ -131,6 +137,8 @@ def write_result(report_file, model, framework, device, model_args, iter_data_li
                 result['max_rss_mem(MB)'] = round(rss_mem, 5) if rss_mem != '' else rss_mem
                 result['max_shared_mem(MB)'] = round(shared_mem, 5) if shared_mem != '' else shared_mem
                 result['prompt_idx'] = iter_data['prompt_idx']
+                result['tokenization_time'] = round(token_time, 5) if token_time != '' else token_time
+                result['detokenization_time'] = round(detoken_time, 5) if detoken_time != '' else detoken_time
                 writer.writerow(result)
 
                 # Skip the warm-up iteration

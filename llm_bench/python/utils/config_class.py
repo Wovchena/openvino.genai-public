@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2018-2023 Intel Corporation
+# Copyright (C) 2023-2024 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 from transformers import AutoTokenizer
 from transformers import AutoModelForCausalLM, T5ForConditionalGeneration, BlenderbotForConditionalGeneration, AutoModel
@@ -11,7 +11,7 @@ from optimum.intel.openvino import (
     OVLatentConsistencyModelPipeline,
     OVStableDiffusionXLPipeline
 )
-from utils.ov_model_classes import OVMPTModel, OVFalconModel, OVLDMSuperResolutionPipeline, OVChatGLMModel, OVChatGLM2Model, OVQwenModel, OVMistralModel
+from utils.ov_model_classes import OVMPTModel, OVFalconModel, OVLDMSuperResolutionPipeline, OVChatGLMModel, OVChatGLM2Model, OVQwenModel
 
 TOKENIZE_CLASSES_MAPPING = {
     'decoder': AutoTokenizer,
@@ -30,8 +30,8 @@ OV_MODEL_CLASSES_MAPPING = {
     'stable-diffusion-xl': OVStableDiffusionXLPipeline,
     'sdxl': OVStableDiffusionXLPipeline,
     'lcm-sdxl': OVStableDiffusionXLPipeline,
-    'ssd-1b': OVStableDiffusionXLPipeline,
-    'lcm-ssd-1b': OVStableDiffusionXLPipeline,
+    'ssd-': OVStableDiffusionXLPipeline,
+    'lcm-ssd-': OVStableDiffusionXLPipeline,
     'stable_diffusion': OVStableDiffusionPipeline,
     'lcm': OVLatentConsistencyModelPipeline,
     'replit': OVMPTModel,
@@ -42,9 +42,6 @@ OV_MODEL_CLASSES_MAPPING = {
     'chatglm3': OVChatGLM2Model,
     'chatglm': OVChatGLMModel,
     'qwen': OVQwenModel,
-    'mistral': OVMistralModel,
-    'zephyr': OVMistralModel,
-    'yi': OVMistralModel,
 }
 
 PT_MODEL_CLASSES_MAPPING = {
@@ -59,10 +56,10 @@ PT_MODEL_CLASSES_MAPPING = {
 }
 
 USE_CASES = {
-    'image_gen': ['stable-diffusion-', 'ssd-1b', 'deepfloyd-if', 'tiny-sd', 'small-sd', 'lcm-', 'sdxl'],
+    'image_gen': ['stable-diffusion-', 'ssd-', 'deepfloyd-if', 'tiny-sd', 'small-sd', 'lcm-', 'sdxl'],
     'text2speech': ['whisper'],
     'image_cls': ['vit'],
-    'code_gen': ['replit', 'codegen2', 'codegen', 'codet5'],
+    'code_gen': ['replit', 'codegen2', 'codegen', 'codet5', "stable-code"],
     'text_gen': [
         'decoder',
         't5',
@@ -97,6 +94,7 @@ USE_CASES = {
         'zephyr',
         'mistral',
         'yi-',
+        'phi-'
     ],
     'ldm_super_resolution': ['ldm-super-resolution'],
 }
