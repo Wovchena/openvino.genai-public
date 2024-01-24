@@ -1,0 +1,6 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "image_generation/"
+    schedule:
+      interval: "weekly"
