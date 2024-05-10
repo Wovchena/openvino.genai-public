@@ -40,18 +40,18 @@ jobs:
           ./build/greedy_causal_lm ./open_llama_3b_v2/ "return 0"
 
   cpp-beam_search_causal_lm-ubuntu:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: '3.10'
       - name: Install OpenVINO
         run: |
           mkdir ./ov/
-          curl https://storage.openvinotoolkit.org/repositories/openvino/packages/2024.1/linux/l_openvino_toolkit_ubuntu20_2024.1.0.15008.f4afc983258_x86_64.tgz | tar --directory ./ov/ --strip-components 1 -xz
+          curl https://storage.openvinotoolkit.org/repositories/openvino/packages/2024.1/linux/l_openvino_toolkit_ubuntu22_2024.1.0.15008.f4afc983258_x86_64.tgz | tar --directory ./ov/ --strip-components 1 -xz
           sudo ./ov/install_dependencies/install_openvino_dependencies.sh
       - name: Download, convert and build
         run: |
