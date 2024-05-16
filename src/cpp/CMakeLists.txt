@@ -44,7 +44,7 @@ ov_genai_build_jinja2cpp()
 
 file(GLOB SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
-set(TARGET_NAME generate_pipeline_lib)
+set(TARGET_NAME genai)
 add_library(${TARGET_NAME} SHARED ${SOURCE_FILES})
 
 target_include_directories(${TARGET_NAME}
@@ -61,8 +61,8 @@ target_compile_features(${TARGET_NAME} PUBLIC cxx_std_17)
 install(TARGETS ${TARGET_NAME} LIBRARY DESTINATION . COMPONENT genai RUNTIME DESTINATION . COMPONENT genai)
 
 # Populate python with the libraries to allow skipping wheel installation
-add_custom_command(TARGET generate_pipeline_lib POST_BUILD
-    COMMAND "${CMAKE_COMMAND}" -E copy
-        "$<TARGET_FILE:generate_pipeline_lib>"
-        "${CMAKE_CURRENT_SOURCE_DIR}/../python/openvino_genai/$<TARGET_FILE_NAME:generate_pipeline_lib>"
-    COMMENT "Copy generate_pipeline_lib to src/python/openvino_genai")
+# add_custom_command(TARGET genai POST_BUILD
+#     COMMAND "${CMAKE_COMMAND}" -E copy
+#         "$<TARGET_FILE:genai>"
+#         "${CMAKE_CURRENT_SOURCE_DIR}/../python/openvino_genai/$<TARGET_FILE_NAME:genai>"
+#     COMMENT "Copy genai to src/python/openvino_genai")
