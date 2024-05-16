@@ -68,7 +68,6 @@ add_custom_command(TARGET genai POST_BUILD
     COMMENT "Copy genai to src/python/openvino_genai")
 
 export(TARGETS genai NAMESPACE openvino:: FILE "${CMAKE_BINARY_DIR}/openvino_genaiConfig.cmake")  # TODO: try to merge
-install(TARGETS ${TARGET_NAME} LIBRARY DESTINATION . COMPONENT core_genai RUNTIME DESTINATION . COMPONENT core_genai)
 
 include(GenerateExportHeader)
 
