@@ -41,7 +41,7 @@ public:
     * @param device optional device
     * @param plugin_config optional plugin_config
     */
-    LLMPipeline(
+    ContinuousBatchingPipeline(
         const std::string& model_path,
         const ov::genai::Tokenizer& tokenizer,
         const SchedulerConfig& scheduler_config,
@@ -49,7 +49,7 @@ public:
         const ov::AnyMap& plugin_config = {}
     );
 
-    std::shared_ptr<ov::genai::Tokenizer> get_tokenizer();
+    ov::genai::Tokenizer get_tokenizer();
 
     ov::genai::GenerationConfig get_config() const;
 

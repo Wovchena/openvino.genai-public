@@ -115,19 +115,19 @@ public:
         return m_pipeline_metrics;
     }
 
-    std::shared_ptr<ov::genai::Tokenizer> get_tokenizer() {
+    ov::genai::Tokenizer get_tokenizer() {
         return m_tokenizer;
     }
 
     GenerationHandle add_request(uint64_t request_id, std::string prompt, ov::genai::GenerationConfig sampling_params) {
-        sampling_params.set_eos_token_id(m_tokenizer->get_eos_token_id());
+        sampling_params.set_eos_token_id(m_tokenizer.get_eos_token_id());
         sampling_params.validate();
 
         ov::Tensor input_ids;
         {
             static ManualTimer timer("tokenize");
             timer.start();
-            input_ids = m_tokenizer->encode(prompt).input_ids;
+            input_ids = m_tokenizer.encode(prompt).input_ids;
             timer.end();
         }
 
@@ -265,7 +265,7 @@ public:
             auto num_outputs = std::min(sampling_params[generation_idx].num_return_sequences, generation_outputs.size());
             for (size_t generation_output_idx = 0; generation_output_idx < num_outputs; ++generation_output_idx) {
                 const auto& generation_output = generation_outputs[generation_output_idx];
-                std::string output_text = m_tokenizer->decode(generation_output.generated_token_ids);
+                std::string output_text = m_tokenizer.decode(generation_output.generated_token_ids);
                 result.m_generation_ids.push_back(output_text);
                 result.m_scores.push_back(generation_output.score);
             }
@@ -295,7 +295,7 @@ ContinuousBatchingPipeline::ContinuousBatchingPipeline(
     m_impl = std::make_shared<Impl>(model_path, tokenizer, scheduler_config, device, plugin_config);
 }
 
-std::shared_ptr<ov::genai::Tokenizer> ContinuousBatchingPipeline::get_tokenizer() {
+ov::genai::Tokenizer ContinuousBatchingPipeline::get_tokenizer() {
     return m_impl->get_tokenizer();
 }
 
