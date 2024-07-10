@@ -425,7 +425,7 @@ int main(int argc, char* argv[]) try {
     options.add_options()
     ("n,num_prompts", "A number of prompts", cxxopts::value<size_t>()->default_value("1000"))
     ("b,max_batch_size", "A maximum number of batched tokens", cxxopts::value<size_t>()->default_value("256"))
-    ("dynamic_split_fuse", "Whether to use dynamic split-fuse or vLLM scheduling", cxxopts::value<bool>()->default_value("false"))
+    ("dynamic_split_fuse", "Whether to use dynamic split-fuse or vLLM scheduling", cxxopts::value<bool>()->default_value("true"))
     ("m,model", "Path to model and tokenizers base directory", cxxopts::value<std::string>()->default_value("."))
     ("dataset", "Path to dataset .json file", cxxopts::value<std::string>()->default_value("./ShareGPT_V3_unfiltered_cleaned_split.json"))
     ("max_input_len", "Max input length take from dataset", cxxopts::value<size_t>()->default_value("1024"))
@@ -466,13 +466,12 @@ int main(int argc, char* argv[]) try {
     Dataset dataset = filtered_dataset(models_path, dataset_path, num_prompts, max_input_len, max_output_len);
 
     // Perform the first inference
-    ov::genai::SchedulerConfig scheduler_config {
-        .max_num_batched_tokens = max_batch_size,
-        .cache_size = cache_size,
-        .block_size = 32,
-        .dynamic_split_fuse = dynamic_split_fuse,
-        .max_num_seqs = 256, // not used if dynamic_split_fuse=True
-    };
+    ov::genai::SchedulerConfig scheduler_config;
+    scheduler_config.max_num_batched_tokens = max_batch_size,
+    scheduler_config.cache_size = cache_size,
+    scheduler_config.block_size = 32,
+    scheduler_config.dynamic_split_fuse = dynamic_split_fuse,
+    scheduler_config.max_num_seqs = 256, // not used if dynamic_split_fuse=True
 
     std::cout << "Benchmarking parameters: " << std::endl;
     std::cout << "\tMax number of batched tokens: " << scheduler_config.max_num_batched_tokens << std::endl;
