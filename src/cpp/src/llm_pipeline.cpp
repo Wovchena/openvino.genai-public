@@ -285,3 +285,66 @@ std::pair<std::string, Any> generation_config(const GenerationConfig& config) {
 
 }  // namespace genai
 }  // namespace ov
+
+using namespace std;
+
+ov::genai::LLMPipeline::LLMPipeline(
+    const ov::InferRequest& request,
+    const ov::genai::Tokenizer& tokenizer,
+    OptionalGenerationConfig generation_config
+) {
+    m_pimpl = std::make_unique<StatefulLLMPipeline>(request, tokenizer, generation_config);
+}
+
+ov::genai::LLMPipeline::LLMPipeline(
+    const std::string& model_path,
+    const ov::genai::Tokenizer& tokenizer,
+    const std::string& device,
+    const ov::AnyMap& plugin_config
+) {
+    if (device == "NPU") {
+        m_pimpl = make_unique<StaticLLMPipeline>(std::filesystem::path(model_path), tokenizer, device, plugin_config);
+    } else {
+        m_pimpl = make_unique<StatefulLLMPipeline>(std::filesystem::path(model_path), tokenizer, device, plugin_config);
+    }
+}
+
+ov::genai::LLMPipeline::LLMPipeline(
+    const std::string& path,
+    const std::string& device,
+    const ov::AnyMap& config
+) {
+    if (device == "NPU") {
+        m_pimpl = make_unique<StaticLLMPipeline>(std::filesystem::path(path), device, config);
+    } else {
+        m_pimpl = make_unique<StatefulLLMPipeline>(std::filesystem::path(path), device, config);
+    }
+}
+
+ov::genai::GenerationConfig ov::genai::LLMPipeline::get_generation_config() const {
+    return m_pimpl->m_generation_config;
+}
+
+ov::genai::Tokenizer ov::genai::LLMPipeline::get_tokenizer() {
+    return m_pimpl->m_tokenizer;
+}
+
+void ov::genai::LLMPipeline::start_chat() {
+    m_pimpl->start_chat();
+}
+
+void ov::genai::LLMPipeline::finish_chat() {
+    m_pimpl->finish_chat();
+}
+
+void ov::genai::LLMPipeline::set_generation_config(const GenerationConfig& config) {
+    int64_t default_eos_token_id = m_pimpl->m_generation_config.eos_token_id;;
+    m_pimpl->m_generation_config = config;
+    // if eos_token_id was not provided in config forward from default config
+    if (config.eos_token_id == -1)
+        m_pimpl->m_generation_config.eos_token_id = default_eos_token_id;
+
+    m_pimpl->m_generation_config.validate();
+}
+
+ov::genai::LLMPipeline::~LLMPipeline() = default;
