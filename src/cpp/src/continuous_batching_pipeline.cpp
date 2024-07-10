@@ -69,9 +69,9 @@ class ContinuousBatchingPipeline::Impl {
     }
 
 public:
-    Impl(const std::string& models_path, const Tokenizer& tokenizer, const SchedulerConfig& scheduler_config, const std::string& device, const ov::AnyMap& plugin_config) {
+    Impl(const std::string& models_path, const Tokenizer& tokenizer, const SchedulerConfig& scheduler_config, const std::string& device, const ov::AnyMap& plugin_config) :
+            m_tokenizer{tokenizer} {
         ov::Core core;
-        m_tokenizer = tokenizer;
 
         // The model can be compiled for GPU as well
         std::shared_ptr<ov::Model> model = core.read_model(models_path + "/openvino_model.xml");
