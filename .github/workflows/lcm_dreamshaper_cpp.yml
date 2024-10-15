@@ -1,0 +1,136 @@
+name: lcm_dreamshaper
+
+on:
+  workflow_dispatch:
+  pull_request:
+  merge_group:
+  push:
+    branches:
+      - master
+      - 'releases/**'
+
+permissions: read-all  # Required by https://github.com/ossf/scorecard/blob/e23b8ad91fd6a64a0a971ca4fc0a4d1650725615/docs/checks.md#token-permissions
+
+env:
+  PYTHON_VERSION: '3.9'
+  LINUX_OV_ARCHIVE_URL: https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2024.5.0-16993-9c432a3641a/l_openvino_toolkit_ubuntu20_2024.5.0.dev20241014_x86_64.tgz
+  WINDOWS_OV_ARCHIVE_URL: https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2024.5.0-16993-9c432a3641a/w_openvino_toolkit_windows_2024.5.0.dev20241014_x86_64.zip
+  OV_INSTALL_DIR: ${{ github.workspace }}/ov
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lcm_dreamshaper_v7_cpp-linux:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Download OpenVINO archive
+        run: |
+          wget ${{ env.LINUX_OV_ARCHIVE_URL}} --progress=bar:force:noscroll -O openvino_package.tar.gz
+          mkdir ${{ env.OV_INSTALL_DIR }}
+          tar -xzf openvino_package.tar.gz -C ${{ env.OV_INSTALL_DIR }} --strip-components=1
+
+      - name: Build app
+        run: |
+          source ${{ env.OV_INSTALL_DIR }}/setupvars.sh
+          cmake -DCMAKE_BUILD_TYPE=Release -S ./ -B ./build/
+          cmake --build ./build/ --config Release --parallel
+
+      - name: Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Create virtual environment
+        run: python3 -m venv openvino_lcm_cpp
+
+      - name: Install python dependencies
+        run: |
+          source openvino_lcm_cpp/bin/activate
+          python -m pip install ./thirdparty/openvino_tokenizers/[transformers] --pre --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly
+          python -m pip install -r ./samples/requirements.txt --pre --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly
+          python -m pip install -U "optimum<1.23" --no-dependencies
+
+      - name: Download and convert models and tokenizer
+        run: |
+          source openvino_lcm_cpp/bin/activate
+          optimum-cli export openvino --model SimianLuo/LCM_Dreamshaper_v7 --task stable-diffusion --weight-format fp16 models/lcm_dreamshaper_v7/FP16
+
+      - name: Run app
+        run: |
+          source ${{ env.OV_INSTALL_DIR }}/setupvars.sh
+          ./build/samples/cpp/text2image/stable_diffusion ./models/lcm_dreamshaper_v7/FP16 "cyberpunk cityscape like Tokyo New York  with tall buildings at dusk golden hour cinematic lighting"
+
+  lcm_dreamshaper_v7_cpp-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Download OpenVINO archive
+        run: |
+          mkdir ${{ env.OV_INSTALL_DIR }}
+          pushd ${{ env.OV_INSTALL_DIR }}
+            Invoke-WebRequest "${{ env.WINDOWS_OV_ARCHIVE_URL}}" -OutFile "openvino_package.zip"
+            Expand-Archive openvino_package.zip -DestinationPath ./tmp
+            mv ./tmp/*/* .
+          popd
+
+      - name: Build app
+        run: |
+          . "${{ env.OV_INSTALL_DIR }}/setupvars.ps1"
+          cmake -DCMAKE_BUILD_TYPE=Release -S ./ -B ./build/
+          cmake --build ./build/ --config Release --parallel
+
+      - name: Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Create virtual environment
+        run: python -m venv openvino_lcm_cpp
+
+      - name: Install python dependencies
+        run: |
+          . "./openvino_lcm_cpp/Scripts/Activate.ps1"
+          python -m pip install ./thirdparty/openvino_tokenizers/[transformers] --pre --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly
+          python -m pip install -r ./samples/requirements.txt --pre --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly
+          python -m pip install -U "optimum<1.23" --no-dependencies
+
+      - name: Download and convert models and tokenizer
+        run: |
+          . "./openvino_lcm_cpp/Scripts/Activate.ps1"
+          optimum-cli export openvino --model SimianLuo/LCM_Dreamshaper_v7 --task stable-diffusion --weight-format fp16 models/lcm_dreamshaper_v7/FP16
+
+      - name: Run app
+        run: >
+          . "${{ env.OV_INSTALL_DIR }}/setupvars.ps1"
+          & "./build/samples/cpp/text2image/Release/stable_diffusion.exe ./models/lcm_dreamshaper_v7/FP16 'cyberpunk cityscape like Tokyo New York with tall buildings at dusk golden hour cinematic lighting'"
+
+  Overall_Status:
+    name: ci/gha_overall_status_lcm
+    needs: [lcm_dreamshaper_v7_cpp-linux, lcm_dreamshaper_v7_cpp-windows]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check status of all jobs
+        if: >-
+          ${{
+            contains(needs.*.result, 'failure') ||
+            contains(needs.*.result, 'cancelled')
+          }}
+        run: exit 1
