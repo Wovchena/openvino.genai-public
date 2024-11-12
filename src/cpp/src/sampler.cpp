@@ -525,6 +525,38 @@ Token Sampler::_greedy_sample(const Logits& logits, size_t top_logprobs) const {
     }
     std::cout << "End of logits\n";
 
+    // Tokenized: 100462, 57811, 30858, 105518, 30,
+    // Token: 2303 logit: 11.8045
+    // Token: 57811 logit: 10.2959
+    // Token: 262 logit: 10.2919
+    // Token: 25067 logit: 10.1312
+    // Token: 10236 logit: 10.0802
+    // End of logits
+    // Token: 5872 logit: 10.3777
+    // Token: 48312 logit: 10.0747
+    // Token: 57811 logit: 9.94822
+    // Token: 715 logit: 9.78935
+    // Token: 7 logit: 9.63816
+    // End of logits
+    // Token: 5872 logit: 14.4359
+    // Token: 7 logit: 12.2975
+    // Token: 320 logit: 12.1356
+    // Token: 715 logit: 12.0986
+    // Token: 220 logit: 11.9878
+    // End of logits
+    // Token: 5872 logit: 16.4339
+    // Token: 220 logit: 16.0252
+    // Token: 320 logit: 14.5822
+    // Token: 256 logit: 14.0152
+    // Token: 715 logit: 12.2023
+    // End of logits
+    // Token: 5872 logit: 16.3185
+    // Token: 220 logit: 16.1136
+    // Token: 320 logit: 15.3242
+    // Token: 256 logit: 14.8854
+    // Token: 715 logit: 12.9276
+    // End of logits
+
     if (top_logprobs) {
         // apply log softmax to max value
         max_value = top_values.front();
