@@ -514,6 +514,17 @@ Token Sampler::_greedy_sample(const Logits& logits, size_t top_logprobs) const {
     size_t max_index = top_indexes.front();
     float max_value = 0.0;
 
+    Logits copy = logits;
+    copy.initialize_vector();
+    std::vector<Token> sorted = copy.m_vector;
+    std::sort(sorted.begin(), sorted.end(), [](const Token& left, const Token& right) {
+        return left.m_log_prob > right.m_log_prob;
+    });
+    for (int i = 0; i < 5; ++i) {
+        std::cout << "Token: " << sorted[i].m_index << " logit: " << sorted[i].m_log_prob << std::endl;
+    }
+    std::cout << "End of logits\n";
+
     if (top_logprobs) {
         // apply log softmax to max value
         max_value = top_values.front();
