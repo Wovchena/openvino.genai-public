@@ -256,6 +256,13 @@ ContinuousBatchingPipeline::ContinuousBatchingImpl::generate(const std::vector<o
         "Currently streaming is possible only with batch size=1 and only for greedy or multinomial decoding");
 
     std::vector<GenerationHandle> generations;
+    // 鸟山明是谁?
+    std::cout << "Tokenized: ";
+    for (int i = 0; i < input_ids.at(0).get_size(); ++i) {
+        // 100462, 57811, 30858, 105518, 30,
+        std::cout << input_ids.at(0).data<int64_t>()[i] << ", ";
+    }
+    std::cout << '\n';
     for (size_t request_id = 0; request_id < input_ids.size(); ++request_id) {
         OPENVINO_ASSERT(1 == input_ids[request_id].get_shape().at(0), "Use multiple tensors to pass a batch.");
         generations.push_back(add_request(request_id, input_ids[request_id], sampling_params[request_id]));
