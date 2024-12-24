@@ -407,7 +407,8 @@ ov::genai::ModelConfigDesc get_modeldesc_from_json(const std::filesystem::path& 
     if (config_data.contains("_name_or_path")) {
         desc.name_or_path = config_data["_name_or_path"].get<std::string>();
     }
-    desc.num_key_value_heads = config_data["num_key_value_heads"].get<int>();
+    desc.num_key_value_heads = config_data.contains("num_key_value_heads")
+        ? config_data["num_key_value_heads"].get<int>() : -1;
     return desc;
 }
 
@@ -777,12 +778,15 @@ void StaticLLMPipeline::setupAndCompileModels(
     set_npuw_cache_dir(prefill_config);
     set_npuw_cache_dir(generate_config);
 
-    m_kvcache_request = core.compile_model(
+    auto kv_compiled_model = core.compile_model(
         kvcache_model, device, generate_config
-    ).create_infer_request();
-    m_prefill_request = core.compile_model(
-        prefill_model, device, prefill_config
-    ).create_infer_request();
+    );
+    ov::genai::utils::print_compiled_model_properties(kv_compiled_model, "Static LLM kv compiled model");
+    m_kvcache_request = kv_compiled_model.create_infer_request();
+
+    auto prefill_compiled_model = core.compile_model(prefill_model, device, prefill_config);
+    m_prefill_request = prefill_compiled_model.create_infer_request();
+    ov::genai::utils::print_compiled_model_properties(prefill_compiled_model, "Static LLM prefill compiled model");
 }
 
 void StaticLLMPipeline::setupAndImportModels(
@@ -1099,6 +1103,11 @@ EncodedResults StaticLLMPipeline::generate(
             m_kvcache_request.get_tensor(output_name).copy_to(kvcache_in_slice);
         }
     }
+
+    if (streamer_ptr) {
+        streamer_ptr->end();
+    }
+
     auto stop_time = std::chrono::steady_clock::now();
     // If is called without tokenization then that stat will not be reported.
     auto& metrics = results.perf_metrics;
