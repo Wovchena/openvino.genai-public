@@ -363,6 +363,17 @@ In addition to image generation models, `InpaintingPipeline` supports specialize
       </td>
     </tr>
     <tr>
+      <td><code>Phi3VForCausalLM</code></td>
+      <td>phi3_v</td>
+      <td>Not supported</td>
+      <td>
+        <ul>
+          <li><a href="https://huggingface.co/microsoft/Phi-3-vision-128k-instruct"><code>microsoft/Phi-3-vision-128k-instruct</code></a></li>
+          <li><a href="https://huggingface.co/microsoft/Phi-3.5-vision-instruct"><code>microsoft/Phi-3.5-vision-instruct</code></a></li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td><code>Qwen2-VL</code></td>
       <td>Qwen2-VL</td>
       <td>Not supported</td>
