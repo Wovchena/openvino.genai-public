@@ -5,6 +5,8 @@ import os
 import sys
 import pytest
 import numpy as np
+import dataclasses
+import openvino
 from transformers import AutoTokenizer
 from typing import Dict, Tuple, List
 from openvino_genai import Tokenizer
@@ -441,4 +443,33 @@ def test_load_special_tokens_from_special_tokens_map_json_with_string_repr(model
         assert tok.get_bos_token_id() == token_str_int_map['bos_token']
     if 'eos_token' in token_str_int_map:
         assert tok.get_eos_token_id() == token_str_int_map['eos_token']
+
+
+@dataclasses.dataclass(frozen=True)
+class ChatTemplates:
+    rt_template: str
+
+def generate_tokenizer(tmp_path):
+    input_ids = openvino.op.Constant(openvino.Type.i64, openvino.Shape([0, 0]), []).output(0)
+    input_ids.get_tensor().set_names({"input_ids"})
+    attention_mask = openvino.op.Constant(openvino.Type.i64, openvino.Shape([0, 0]), []).output(0)
+    attention_mask.get_tensor().set_names({"attention_mask"})
+    model = openvino.Model([openvino.op.Result(input_ids), openvino.op.Result(attention_mask)], [openvino.op.Parameter(openvino.Type.string, openvino.Shape([1]))])
+    openvino.save_model(model, tmp_path / "openvino_tokenizer.xml")
+
+
+@pytest.mark.precommit
+@pytest.mark.nightly
+def test_known_template_remap():
+    pass
+
+
+@pytest.mark.precommit
+@pytest.mark.nightly
+def test_template_priorities(tmp_path):
+    ChatTemplates("asdf")
+    generate_tokenizer(tmp_path)
+    Tokenizer(tmp_path)
+    # tokenizer = Tokenizer(tmp_path)
+    # print(tokenizer.chat_template)
 
