@@ -47,38 +47,6 @@ ov::Core get_core_singleton() {
     return core;
 }
 
-const std::pair<std::string, std::string> chat_template_fallback_map[] = {
-    {
-        // llava-1.5, llava-v1.6-vicuna (chat_template.json)
-        "{% for message in messages %}{% if message['role'] != 'system' %}{{ message['role'].upper() + ': '}}{% endif %}{# Render all images first #}{% for content in message['content'] | selectattr('type', 'equalto', 'image') %}{{ '<image>\n' }}{% endfor %}{# Render all text next #}{% if message['role'] != 'assistant' %}{% for content in message['content'] | selectattr('type', 'equalto', 'text') %}{{ content['text'] + ' '}}{% endfor %}{% else %}{% for content in message['content'] | selectattr('type', 'equalto', 'text') %}{% generation %}{{ content['text'] + ' '}}{% endgeneration %}{% endfor %}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'ASSISTANT:' }}{% endif %}",
-        "{% for message in messages %}{% if message['role'] != 'system' %}{{ message['role'] | upper + ': ' }}{% endif %}{{ message['content'] + ' ' }}{% endfor %}{% if add_generation_prompt %}{{ 'ASSISTANT:' }}{% endif %}"
-    },
-    {
-        // tiny-random-llava-next, llava-v1.6-mistral (chat_template.json)
-        "{% for message in messages %}{% if message['role'] == 'system' %}{{ '<<SYS>>\n' + message['content'][0]['text'] + '\n<</SYS>>\n\n' }}{% elif message['role'] == 'user' %}{{ '[INST] ' }}{# Render all images first #}{% for content in message['content'] | selectattr('type', 'equalto', 'image') %}{{ '<image>\n' }}{% endfor %}{# Render all text next #}{% for content in message['content'] | selectattr('type', 'equalto', 'text') %}{{ content['text'] }}{% endfor %}{{' [/INST]' }}{% elif message['role'] == 'assistant' %}{{ ' ' + message['content'][0]['text'] + '<\\s> '}}{% else %}{{ raise_exception('Only user and assistant roles are supported!') }}{% endif %}{% endfor %}",
-        "{% for message in messages %}{% if message['role'] == 'system' %}{{ '<<SYS>>\n' + message['content'] + '\n<</SYS>>\n\n' }}{% elif message['role'] == 'user' %}{{ '[INST] ' + message['content'] + ' [/INST]' }}{% elif message['role'] == 'assistant' %}{{ ' ' + message['content'] + '<\\s> ' }}{% else %}{{ raise_exception('Only user and assistant roles are supported!') }}{% endif %}{% endfor %}"
-    },
-    {
-        // Qwen2-VL-2B-Instruct (tokenizer_config.json)
-        "{% set image_count = namespace(value=0) %}{% set video_count = namespace(value=0) %}{% for message in messages %}{% if loop.first and message['role'] != 'system' %}<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n{% endif %}<|im_start|>{{ message['role'] }}\n{% if message['content'] is string %}{{ message['content'] }}<|im_end|>\n{% else %}{% for content in message['content'] %}{% if content['type'] == 'image' or 'image' in content or 'image_url' in content %}{% set image_count.value = image_count.value + 1 %}{% if add_vision_id %}Picture {{ image_count.value }}: {% endif %}<|vision_start|><|image_pad|><|vision_end|>{% elif content['type'] == 'video' or 'video' in content %}{% set video_count.value = video_count.value + 1 %}{% if add_vision_id %}Video {{ video_count.value }}: {% endif %}<|vision_start|><|video_pad|><|vision_end|>{% elif 'text' in content %}{{ content['text'] }}{% endif %}{% endfor %}<|im_end|>\n{% endif %}{% endfor %}{% if add_generation_prompt %}<|im_start|>assistant\n{% endif %}",
-        "{% for message in messages %}{% if loop.first and messages[0]['role'] != 'system' %}{{ '<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n' }}{% endif %}{{ '<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n' }}{% endfor %}{% if add_generation_prompt %}{{ '<|im_start|>assistant\n' }}{% endif %}"
-    },
-    {
-        // Qwen2-VL-2B (tokenizer_config.json)
-        "{% if messages is string %}{{ messages }}{% else %}{% for content in messages %}{% if content['type'] == 'image' or 'image' in content or 'image_url' in content %}<|vision_start|><|image_pad|><|vision_end|>{% elif content['type'] == 'video' or 'video' in content %}<|vision_start|><|video_pad|><|vision_end|>{% elif 'text' in content %}{{ content['text'] }}{% endif %}{% endfor %}{% endif %}",
-        "{% for message in messages %}{{ message['content'] }}{% endfor %}"
-    }
-};    
-
-std::optional<std::string> remap_template(const std::string& chat_template) {
-    for (const auto& [known, fallback] : chat_template_fallback_map) {
-        if (chat_template == known) {
-            return fallback;
-        }
-    }
-    return std::nullopt;
-}
-
 void parse_if_exists(const std::filesystem::path& path, std::string& value) {
     if (std::filesystem::exists(path)) {
         ov::genai::utils::read_json_param(nlohmann::json::parse(std::ifstream{path}), "chat_template", value);
@@ -89,40 +57,9 @@ template <typename T>
 const T& find_or_fallback(const ov::AnyMap& rt_info, const char name[], const T& fallback) {
     auto iter = rt_info.find(name);
     if (rt_info.end() == iter) {
-        return fallback;  // TODO frward vs move?
+        return fallback;
     }
     return iter->second.as<T>();
-}
-
-std::string patch_template(std::string&& chat_template) {
-    // Replace what jinja2cpp doesn't support
-    std::pair<std::string, std::string> replace_str_map[] = {
-        {"'}", "' }"},
-        {"{'", "{ '"},
-        {".strip()", ""},
-        {"is not none", "is defined"},
-        {"is none", "is undefined"},
-        {"= none", "= undefined"},
-        // Jinja2Cpp does not support Python-style slicing, e.g. [1:].
-        // If chat template contains such slicing, we replace it with
-        // a placeholder at the moment.
-        {"messages[1:]", "slice(messages, 1)"},
-    };
-
-    for (const auto& [from, to] : replace_str_map) {
-        size_t pos = 0;
-        while ((pos = chat_template.find(from, pos)) != std::string::npos) {
-            chat_template.replace(pos, from.size(), to);
-            pos += to.size();
-        }
-    }
-    return chat_template;
-}
-
-std::string remap_and_patch(const std::string& chat_template) {
-    return patch_template(
-        remap_template(chat_template).value_or(chat_template)
-    );
 }
 
 }  // namespace
@@ -286,10 +223,7 @@ public:
             m_eos_token_id = find_or_fallback(rt_info, "eos_token_id", m_eos_token_id);
 
             m_chat_template = find_or_fallback(rt_info, "chat_template", m_chat_template);
-            std::optional<std::string> fallback = remap_template(m_chat_template);
-            if (fallback.has_value()) {
-                m_chat_template = patch_template(std::move(fallback).value());
-            }
+            m_chat_template = patch_chat_template(m_chat_template);
             m_chat_template = find_or_fallback(rt_info, "simplified_chat_template", m_chat_template);
         }
 
@@ -550,12 +484,6 @@ public:
     }
 
     std::string patch_chat_template(std::string template_str) const {
-        for (const auto& [chat_template, fallback] : chat_template_fallback_map) {
-            if (template_str == chat_template) {
-                return fallback;
-            }
-        }
-
         // Replace what jinja2cpp doesn't support
         std::pair<std::string, std::string> replace_str_map[] = {
             {"'}", "' }"},
@@ -583,7 +511,7 @@ public:
     std::string apply_chat_template(ChatHistory history,
                                     bool add_generation_prompt,
                                     const std::string& chat_template) const {
-        std::string chat_tpl = chat_template.empty() ? m_chat_template : remap_and_patch(chat_template);
+        std::string chat_tpl = chat_template.empty() ? m_chat_template : patch_chat_template(chat_template);
         OPENVINO_ASSERT(!chat_tpl.empty(),
                         "Chat template wasn't found. This may indicate that the model wasn't trained for chat scenario."
                         " Please add 'chat_template' to tokenizer_config.json to use the model in chat scenario."
@@ -641,7 +569,7 @@ public:
     }
 
     void set_chat_template(const std::string& chat_template) {
-        m_chat_template = remap_and_patch(chat_template);
+        m_chat_template = patch_chat_template(chat_template);
     }
 
     std::string get_chat_template() {

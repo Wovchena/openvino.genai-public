@@ -6,6 +6,7 @@ import sys
 import pytest
 import numpy as np
 import dataclasses
+import typing
 import openvino
 from transformers import AutoTokenizer
 from typing import Dict, Tuple, List
@@ -447,29 +448,57 @@ def test_load_special_tokens_from_special_tokens_map_json_with_string_repr(model
 
 @dataclasses.dataclass(frozen=True)
 class ChatTemplates:
-    rt_template: str
+    reference: typing.Optional[str]
+    rt_simplified: typing.Optional[str]
+    rt_template: typing.Optional[str]
+    chat_template_json: typing.Optional[str]
+    processor_config_json: typing.Optional[str]
+    tokenizer_config_json: typing.Optional[str]
 
-def generate_tokenizer(tmp_path):
+
+def generate_tokenizer(tmp_path, chat_templates):
     input_ids = openvino.op.Constant(openvino.Type.i64, openvino.Shape([0, 0]), []).output(0)
     input_ids.get_tensor().set_names({"input_ids"})
     attention_mask = openvino.op.Constant(openvino.Type.i64, openvino.Shape([0, 0]), []).output(0)
     attention_mask.get_tensor().set_names({"attention_mask"})
     model = openvino.Model([openvino.op.Result(input_ids), openvino.op.Result(attention_mask)], [openvino.op.Parameter(openvino.Type.string, openvino.Shape([1]))])
+    if chat_templates.rt_simplified is not None:
+        model.set_rt_info(chat_templates.rt_simplified, "simplified_chat_template")
+    if chat_templates.rt_template is not None:
+        model.set_rt_info(chat_templates.rt_template, "chat_template")
+    if chat_templates.chat_template_json is not None:
+        with open(tmp_path / "chat_template.json", "w") as file:
+            json.dump({"chat_template": chat_templates.chat_template_json}, file)
+    if chat_templates.processor_config_json is not None:
+        with open(tmp_path / "processor_config.json", "w") as file:
+            json.dump({"chat_template": chat_templates.processor_config_json}, file)
+    if chat_templates.tokenizer_config_json is not None:
+        with open(tmp_path / "tokenizer_config.json", "w") as file:
+            json.dump({"chat_template": chat_templates.tokenizer_config_json}, file)
     openvino.save_model(model, tmp_path / "openvino_tokenizer.xml")
+    return Tokenizer(tmp_path)
 
 
 @pytest.mark.precommit
 @pytest.mark.nightly
-def test_known_template_remap():
-    pass
-
-
-@pytest.mark.precommit
-@pytest.mark.nightly
-def test_template_priorities(tmp_path):
-    ChatTemplates("asdf")
-    generate_tokenizer(tmp_path)
-    Tokenizer(tmp_path)
-    # tokenizer = Tokenizer(tmp_path)
-    # print(tokenizer.chat_template)
+@pytest.mark.parametrize("chat_templates", [
+    ChatTemplates("reference", "reference", "", "", "", ""),
+    ChatTemplates("reference", None, "reference", "", "", ""),
+    ChatTemplates("reference", None, None, "reference", "", ""),
+    ChatTemplates("reference", None, None, None, "reference", ""),
+    ChatTemplates("reference", None, None, None, None, "reference"),
+    ChatTemplates(
+        "{% set image_count = namespace(value=0) %}{% set video_count = namespace(value=0) %}{% for message in messages %}{% if loop.first and message['role'] != 'system' %}<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n{% endif %}<|im_start|>{{ message['role'] }}\n{% if message['content'] is string %}{{ message['content'] }}<|im_end|>\n{% else %}{% for content in message['content'] %}{% if content['type'] == 'image' or 'image' in content or 'image_url' in content %}{% set image_count.value = image_count.value + 1 %}{% if add_vision_id %}Picture {{ image_count.value }}: {% endif %}<|vision_start|><|image_pad|><|vision_end|>{% elif content['type'] == 'video' or 'video' in content %}{% set video_count.value = video_count.value + 1 %}{% if add_vision_id %}Video {{ video_count.value }}: {% endif %}<|vision_start|><|video_pad|><|vision_end|>{% elif 'text' in content %}{{ content['text'] }}{% endif %}{% endfor %}<|im_end|>\n{% endif %}{% endfor %}{% if add_generation_prompt %}<|im_start|>assistant\n{% endif %}"
+        ,
+        "",
+        "{% for message in messages %}{% if loop.first and messages[0]['role'] != 'system' %}{{ '<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n' }}{% endif %}{{ '<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n' }}{% endfor %}{% if add_generation_prompt %}{{ '<|im_start|>assistant\n' }}{% endif %}",
+        "",
+        "",
+        ""
+    ),
+])
+def test_template_priorities(tmp_path, chat_templates):
+    generate_tokenizer(tmp_path, chat_templates)
+    tokenizer = generate_tokenizer(tmp_path, chat_templates)
+    assert tokenizer.chat_template == chat_templates.reference
 
