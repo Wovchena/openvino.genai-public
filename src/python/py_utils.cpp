@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Intel Corporation
+// Copyright (C) 2023-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
 #include "py_utils.hpp"
@@ -6,6 +6,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
+#include <pybind11/stl/filesystem.h>
 #include <pybind11/functional.h>
 
 #include <openvino/runtime/auto/properties.hpp>
@@ -37,6 +38,8 @@ py::list handle_utf8(const std::vector<std::string>& decoded_res) {
     return res;
 }
 
+namespace {
+
 bool py_object_is_any_map(const py::object& py_obj) {
     if (!py::isinstance<py::dict>(py_obj)) {
         return false;
@@ -65,29 +68,12 @@ ov::AnyMap py_object_to_any_map(const py::object& py_obj) {
 }
 
 ov::Any py_object_to_any(const py::object& py_obj, std::string property_name) {
-    // Python types
-    // TODO: Remove this after ov::Any is fixed to allow pass types, that can be casted to target type. Ticket: 157622
-    std::set<std::string> size_t_properties = {
-        "max_new_tokens",
-        "max_length",
-        "min_new_tokens",
-        "logprobs",
-        "num_beam_groups",
-        "num_beams",
-        "num_return_sequences",
-        "no_repeat_ngram_size",
-        "top_k",
-        "rng_seed",
-        "num_assistant_tokens",
-        "max_initial_timestamp_index",
-        "num_images_per_prompt",
-        "num_inference_steps",
-        "max_sequence_length"
-    };
     // These properties should be casted to ov::AnyMap, instead of std::map. 
     std::set<std::string> any_map_properties = {
         "GENERATE_CONFIG",
         "PREFILL_CONFIG",
+        "++GENERATE_CONFIG",
+        "++PREFILL_CONFIG"
     };
 
     py::object float_32_type = py::module_::import("numpy").attr("float32");
@@ -102,9 +88,6 @@ ov::Any py_object_to_any(const py::object& py_obj, std::string property_name) {
     } else if (py::isinstance(py_obj, float_32_type)) {
         return py_obj.cast<float>();
     } else if (py::isinstance<py::int_>(py_obj)) {
-        if (size_t_properties.find(property_name) != size_t_properties.end()) {
-            return py_obj.cast<size_t>();
-        }
         return py_obj.cast<int64_t>();
     } else if (py::isinstance<py::none>(py_obj)) {
         return {};
@@ -259,8 +242,6 @@ ov::Any py_object_to_any(const py::object& py_obj, std::string property_name) {
         return py::cast<ov::device::Type>(py_obj);
     } else if (py::isinstance<ov::streams::Num>(py_obj)) {
         return py::cast<ov::streams::Num>(py_obj);
-    } else if (py::isinstance<ov::Affinity>(py_obj)) {
-        return py::cast<ov::Affinity>(py_obj);
     } else if (py::isinstance<ov::Tensor>(py_obj)) {
         return py::cast<ov::Tensor>(py_obj);
     } else if (py::isinstance<ov::Output<ov::Node>>(py_obj)) {
@@ -290,14 +271,15 @@ ov::Any py_object_to_any(const py::object& py_obj, std::string property_name) {
     OPENVINO_THROW("Property \"" + property_name + "\" got unsupported type.");
 }
 
-std::map<std::string, ov::Any> properties_to_any_map(const std::map<std::string, py::object>& properties) {
-    std::map<std::string, ov::Any> properties_to_cpp;
+} // namespace
+
+ov::AnyMap properties_to_any_map(const std::map<std::string, py::object>& properties) {
+    ov::AnyMap properties_to_cpp;
     for (const auto& property : properties) {
         properties_to_cpp[property.first] = py_object_to_any(property.second, property.first);
     }
     return properties_to_cpp;
 }
-
 
 ov::AnyMap kwargs_to_any_map(const py::kwargs& kwargs) {
     ov::AnyMap params = {};
@@ -321,32 +303,42 @@ ov::AnyMap kwargs_to_any_map(const py::kwargs& kwargs) {
     return params;
 }
 
-std::string ov_tokenizers_module_path() {
+std::filesystem::path ov_tokenizers_module_path() {
     // Try a path relative to build artifacts folder first.
     std::filesystem::path from_relative = tokenizers_relative_to_genai();
     if (std::filesystem::exists(from_relative)) {
-        return from_relative.string();
+        return from_relative;
     }
-    return py::str(py::module_::import("openvino_tokenizers").attr("_ext_path"));
+    return py::module_::import("openvino_tokenizers").attr("_ext_path").cast<std::filesystem::path>();
 }
 
 ov::genai::StreamerVariant pystreamer_to_streamer(const PyBindStreamerVariant& py_streamer) {
     ov::genai::StreamerVariant streamer = std::monostate();
 
     std::visit(overloaded {
-    [&streamer](const std::function<bool(py::str)>& py_callback){
-        // Wrap python streamer with manual utf-8 decoding. Do not rely
-        // on pybind automatic decoding since it raises exceptions on incomplete strings.
-        auto callback_wrapped = [py_callback](std::string subword) -> bool {
-            auto py_str = PyUnicode_DecodeUTF8(subword.data(), subword.length(), "replace");
-            return py_callback(py::reinterpret_borrow<py::str>(py_str));
-        };
-        streamer = callback_wrapped;
-    },
-    [&streamer](std::shared_ptr<StreamerBase> streamer_cls){
-        streamer = streamer_cls;
-    },
-    [](std::monostate none){ /*streamer is already a monostate */ }
+        [&streamer](const std::function<std::optional<uint16_t>(py::str)>& py_callback){
+            // Wrap python streamer with manual utf-8 decoding. Do not rely
+            // on pybind automatic decoding since it raises exceptions on incomplete strings.
+            auto callback_wrapped = [py_callback](std::string subword) -> ov::genai::StreamingStatus {
+                py::gil_scoped_acquire acquire;
+                auto py_str = PyUnicode_DecodeUTF8(subword.data(), subword.length(), "replace");
+                std::optional<uint16_t> callback_output = py_callback(py::reinterpret_borrow<py::str>(py_str));
+                if (callback_output.has_value()) {
+                    if (*callback_output == (uint16_t)StreamingStatus::RUNNING)
+                        return StreamingStatus::RUNNING;
+                    else if (*callback_output == (uint16_t)StreamingStatus::CANCEL)
+                        return StreamingStatus::CANCEL;
+                    return StreamingStatus::STOP;
+                } else {
+                    return StreamingStatus::RUNNING;
+                }
+            };
+            streamer = callback_wrapped;
+        },
+        [&streamer](std::shared_ptr<StreamerBase> streamer_cls){
+            streamer = streamer_cls;
+        },
+        [](std::monostate none){ /*streamer is already a monostate */ }
     }, py_streamer);
     return streamer;
 }
@@ -356,9 +348,12 @@ ov::genai::OptionalGenerationConfig update_config_from_kwargs(const ov::genai::O
         return std::nullopt;
 
     ov::genai::GenerationConfig res_config;
-    if(config.has_value())
+    if (config.has_value())
         res_config = *config;
-    res_config.update_generation_config(kwargs_to_any_map(kwargs));
+
+    if (!kwargs.empty())
+        res_config.update_generation_config(kwargs_to_any_map(kwargs));
+
     return res_config;
 }
 

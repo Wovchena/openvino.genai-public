@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Intel Corporation
+// Copyright (C) 2023-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
 #include <algorithm>
@@ -473,7 +473,7 @@ struct LoRAWeightStateGetter {
 class LoRATransformBase : public ov::pass::MatcherPass {
 public:
 
-    OPENVINO_RTTI("LoRATransformBase");
+    OPENVINO_MATCHER_PASS_RTTI("LoRATransformBase");
 
     LoRATransformBase(const LoRAWeightByNodeGetter& lora_weight_getter) {
         register_matcher(
@@ -693,7 +693,7 @@ class LoRAFuseTransform : public LoRATransformBase {
 
 public:
 
-    OPENVINO_RTTI("LoRAFuseTransform");
+    OPENVINO_RTTI("LoRAFuseTransform", "genai", LoRATransformBase);
 
     LoRAFuseTransform(const LoRAWeightByNodeGetter& lora_weight_getter, const std::string& device_for_fusion = "CPU") :
         LoRATransformBase(lora_weight_getter),
@@ -763,7 +763,7 @@ public:
 class LoRASeparateTransform : public LoRATransformBase {
 public:
 
-    OPENVINO_RTTI("LoRASeparateTransform");
+    OPENVINO_RTTI("LoRASeparateTransform", "genai", LoRATransformBase);
 
     LoRASeparateTransform(const LoRAWeightByNodeGetter& lora_getter) : LoRATransformBase(lora_getter) {}
 
@@ -1305,7 +1305,7 @@ AdapterController::AdapterController(std::shared_ptr<ov::Model> model, const Ada
 
 
 // Call it every time when adapter config is changed; if adapter was configured as a static one, this call is not required
-void AdapterController::apply(ov::InferRequest& request, const std::optional<AdapterConfig>& config) {
+void AdapterController::apply(ov::InferRequest request, const std::optional<AdapterConfig>& config) {
     OPENVINO_ASSERT(m_pimpl || !config || !*config,
         "Adapters are passed to AdapterController but it was not configured to use adapters. "
         "Enable using adapters by pass them in the constructor first.");

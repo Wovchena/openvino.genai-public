@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Intel Corporation
+// Copyright (C) 2023-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
 
@@ -96,8 +96,12 @@ py::object call_vlm_generate(
 ) {
     auto updated_config = *pyutils::update_config_from_kwargs(generation_config, kwargs);
     ov::genai::StreamerVariant streamer = pyutils::pystreamer_to_streamer(py_streamer);
-
-    return py::cast(pipe.generate(prompt, images, updated_config, streamer));
+    ov::genai::VLMDecodedResults res;
+    {
+        py::gil_scoped_release rel;
+        res= pipe.generate(prompt, images, updated_config, streamer);
+    }
+    return py::cast(res);
 }
 
 void init_vlm_pipeline(py::module_& m) {
@@ -112,13 +116,13 @@ void init_vlm_pipeline(py::module_& m) {
         .def("get_prepare_embeddings_duration", &ov::genai::VLMPerfMetrics::get_prepare_embeddings_duration)
         .def_readonly("vlm_raw_metrics", &ov::genai::VLMPerfMetrics::vlm_raw_metrics);
 
-    py::class_<ov::genai::VLMDecodedResults>(m, "VLMDecodedResults", decoded_results_docstring)
+    py::class_<ov::genai::VLMDecodedResults, ov::genai::DecodedResults>(m, "VLMDecodedResults", decoded_results_docstring)
         .def(py::init<>())
-        .def_property_readonly("texts", [](const ov::genai::VLMDecodedResults &dr) -> py::typing::List<py::str> { return pyutils::handle_utf8((std::vector<std::string>)dr); })
+        .def_property_readonly("texts", [](const ov::genai::VLMDecodedResults &dr) -> py::typing::List<py::str> { return pyutils::handle_utf8(dr.texts); })
         .def_readonly("scores", &ov::genai::VLMDecodedResults::scores)
         .def_readonly("perf_metrics", &ov::genai::VLMDecodedResults::perf_metrics)
         .def("__str__", [](const ov::genai::VLMDecodedResults &dr) -> py::str {
-            auto valid_utf8_strings = pyutils::handle_utf8((std::vector<std::string>)dr);
+            auto valid_utf8_strings = pyutils::handle_utf8(dr.texts);
             py::str res;
             if (valid_utf8_strings.size() == 1)
                 return valid_utf8_strings[0];
@@ -150,10 +154,10 @@ void init_vlm_pipeline(py::module_& m) {
 
         .def("start_chat", &ov::genai::VLMPipeline::start_chat, py::arg("system_message") = "")
         .def("finish_chat", &ov::genai::VLMPipeline::finish_chat)
-        .def("set_chat_template", &ov::genai::VLMPipeline::set_chat_template, py::arg("new_template"))
+        .def("set_chat_template", &ov::genai::VLMPipeline::set_chat_template, py::arg("chat_template"))
         .def("get_tokenizer", &ov::genai::VLMPipeline::get_tokenizer)
-        .def("get_generation_config", &ov::genai::VLMPipeline::get_generation_config)
-        .def("set_generation_config", &ov::genai::VLMPipeline::set_generation_config, py::arg("new_config"))
+        .def("get_generation_config", &ov::genai::VLMPipeline::get_generation_config, py::return_value_policy::copy)
+        .def("set_generation_config", &ov::genai::VLMPipeline::set_generation_config, py::arg("config"))
         .def(
             "generate",
             [](ov::genai::VLMPipeline& pipe,
@@ -194,7 +198,13 @@ void init_vlm_pipeline(py::module_& m) {
                const std::string& prompt,
                const py::kwargs& kwargs
             )  -> py::typing::Union<ov::genai::VLMDecodedResults> {
-                return py::cast(pipe.generate(prompt, pyutils::kwargs_to_any_map(kwargs)));
+                auto map = pyutils::kwargs_to_any_map(kwargs);
+                ov::genai::VLMDecodedResults res;
+                {
+                    py::gil_scoped_release rel;
+                    res = pipe.generate(prompt, map);
+                }
+                return py::cast(res);
             },
             py::arg("prompt"), "Input string",
             (vlm_generate_kwargs_docstring + std::string(" \n ")).c_str()

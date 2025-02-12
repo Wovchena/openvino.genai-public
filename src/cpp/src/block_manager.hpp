@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Intel Corporation
+// Copyright (C) 2023-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
 #pragma once
@@ -195,6 +195,7 @@ class BlockAllocator {
     size_t m_num_layers;
     bool m_enable_prefix_caching;
     ov::genai::OverwritableBlocksHashStore m_overwriteable_blocks;
+
 public:
     /**
      * Constructs the BlockAllocator.
@@ -205,20 +206,43 @@ public:
      * Blocks returned will be vectors with this size, each vector entry to be associated with a separate layer's KV cache.
      */
     BlockAllocator(size_t num_blocks, bool enable_prefix_caching, size_t num_layers = 1) :
-            m_free_blocks_num(num_layers, num_blocks), m_total_num_blocks(num_blocks), m_num_layers(num_layers), m_enable_prefix_caching(enable_prefix_caching), m_overwriteable_blocks(num_layers) {
+            m_total_num_blocks(num_blocks), m_num_layers(num_layers), m_enable_prefix_caching(enable_prefix_caching), m_overwriteable_blocks(num_layers) {
         OPENVINO_ASSERT(num_layers != 0, "num_layers must be non-zero");
         m_free_blocks.resize(m_num_layers);
-        for (auto& per_layer_block_list : m_free_blocks) {
-            for (int block_id = 0; block_id < m_total_num_blocks; ++block_id) {
-                per_layer_block_list.push_back(std::make_shared<KVCacheBlock>(block_id));
+        if (num_blocks > 0) {
+            m_free_blocks_num = std::vector<size_t>(num_layers, num_blocks);
+            for (auto& per_layer_block_list : m_free_blocks) {
+                for (int block_id = 0; block_id < m_total_num_blocks; ++block_id) {
+                    per_layer_block_list.push_back(std::make_shared<KVCacheBlock>(block_id));
+                }
             }
+        } else {
+            m_free_blocks_num = std::vector<size_t>(m_num_layers, 0);
         }
     }
 
     ~BlockAllocator() {
         // sanity check to validate that all blocks are freed
-        // OPENVINO_ASSERT(m_total_num_blocks == m_free_blocks.size());
+        for (auto& free_block : m_free_blocks_num) {
+            size_t free_and_overwritable_block_cnt = free_block + num_overwriteable_blocks();
+            OPENVINO_ASSERT(m_total_num_blocks == free_and_overwritable_block_cnt, "Expected num free blocks: ", m_total_num_blocks, ", actual: ", free_and_overwritable_block_cnt);
+        }
     }
+
+    void increase_kv_blocks_number(size_t new_kv_blocks_count) {
+        OPENVINO_ASSERT(new_kv_blocks_count > m_total_num_blocks, "New blocks number should be more than previous blocks number.");
+        size_t added_blocks = new_kv_blocks_count - m_total_num_blocks;
+        for (auto idx = 0; idx < m_free_blocks_num.size(); idx++) {
+            m_free_blocks_num[idx] += added_blocks;
+        }
+        for (auto& per_layer_block_list : m_free_blocks) {
+            for (int block_id = m_total_num_blocks; block_id < new_kv_blocks_count; ++block_id) {
+                per_layer_block_list.push_back(std::make_shared<KVCacheBlock>(block_id));
+            }
+        }
+        m_total_num_blocks = new_kv_blocks_count;
+    }
+
 
     /**
      * Returns the number of free blocks for a given layer.
@@ -459,6 +483,13 @@ public:
         for (size_t layer_idx = 0; layer_idx < m_num_layers; layer_idx++) sum += num_free_blocks(layer_idx);
         return static_cast<float>(m_num_layers * m_total_num_blocks - sum) / (m_num_layers * m_total_num_blocks) * 100;
     }
+
+    /**
+     * @return The total number of KV blocks .
+     */
+    size_t get_total_number_of_kv_blocks() const {
+        return m_total_num_blocks;
+    }
 };
 
 /**
@@ -499,7 +530,7 @@ public:
 
     ~BlockManager() {
         // sanity check that all sequences are freed
-        // OPENVINO_ASSERT(m_block_table.empty());
+        OPENVINO_ASSERT(m_block_table.empty());
     }
 
     /**
@@ -540,9 +571,9 @@ public:
      */
     const size_t free_group_partially(SequenceGroup::Ptr sequence_group, size_t num_required_blocks) {
         size_t blocks_num = std::ceil(num_required_blocks / sequence_group->get_not_finished_sequences().size());
-        auto running_sequences = sequence_group->get_not_finished_sequences();
-        for (size_t idx = 0; idx < running_sequences.size(); ++idx) {
-            auto seq_id = running_sequences[idx]->get_id();
+        auto not_finished_sequences = sequence_group->get_not_finished_sequences();
+        for (size_t idx = 0; idx < not_finished_sequences.size(); ++idx) {
+            auto seq_id = not_finished_sequences[idx]->get_id();
             OPENVINO_ASSERT(m_block_table.count(seq_id) > 0, "Invalid sequence group.");
             free_sequence_partially(seq_id, blocks_num);
         }
@@ -551,9 +582,9 @@ public:
 
     const size_t free_last_block_from_each_sequence(SequenceGroup::Ptr sequence_group) {
         size_t blocks_released = 0;
-        auto running_sequences = sequence_group->get_not_finished_sequences();
-        for (size_t idx = 0; idx < running_sequences.size(); ++idx) {
-            auto seq_id = running_sequences[idx]->get_id();
+        auto not_finished_sequences = sequence_group->get_not_finished_sequences();
+        for (size_t idx = 0; idx < not_finished_sequences.size(); ++idx) {
+            auto seq_id = not_finished_sequences[idx]->get_id();
             OPENVINO_ASSERT(m_block_table.count(seq_id) > 0, "Invalid sequence group.");
             if (free_last_block(seq_id)) {
                 blocks_released++;
@@ -711,6 +742,21 @@ public:
      */
     float get_used_percentage() const {
         return m_allocator.get_used_percentage();
+    }
+
+    /**
+     * Increases the number of KV blocks.
+     * @param num_blocks The new number of KV-blocks.
+     */
+    void increase_kv_blocks_number(size_t num_blocks) {
+        m_allocator.increase_kv_blocks_number(num_blocks);
+    }
+
+    /**
+     * @return The total number of KV blocks .
+     */
+    size_t get_total_number_of_kv_blocks() const {
+        return m_allocator.get_total_number_of_kv_blocks();
     }
 
     /**

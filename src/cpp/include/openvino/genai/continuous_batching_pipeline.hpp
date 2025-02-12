@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Intel Corporation
+// Copyright (C) 2023-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
 #pragma once
@@ -52,8 +52,9 @@ struct PipelineMetrics {
 
 class OPENVINO_GENAI_EXPORTS ContinuousBatchingPipeline {
 protected:
-    class ImplInterface;
+    class IContinuousBatchingPipeline;
     class ContinuousBatchingImpl;
+
     class ContinuousBatchingForSpeculativeDecodingImpl;
     class ContinuousBatchingForPromptLookupImpl;
     class SpeculativeDecodingImpl;
@@ -64,7 +65,7 @@ protected:
     friend class SpeculativeDecodingImpl;
     friend class PromptLookupImpl;
 
-    std::shared_ptr<ImplInterface> m_impl;
+    std::shared_ptr<IContinuousBatchingPipeline> m_impl;
 
     ContinuousBatchingPipeline() = default;
 
