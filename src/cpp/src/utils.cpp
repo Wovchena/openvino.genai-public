@@ -32,21 +32,27 @@ Tensor init_attention_mask(const Tensor& input_ids) {
 }
 
 void print_tensor(const ov::Tensor& tensor) {
-    std::vector<int64_t> res;
-
     auto t_shape = tensor.get_shape();
-    std::cout << "[";
-    for (size_t i = 0; i < t_shape[0]; ++i) {
-        std::cout << "|";
-        for (size_t j = 0; j < t_shape[1]; ++j) {
-            if (tensor.get_element_type() == ov::element::i64) {
-                res.emplace_back(tensor.data<int64_t>()[t_shape[1] * i + j]);
-                std::cout << tensor.data<int64_t>()[t_shape[1] * i + j] << " ";
+    std::cout << t_shape << ' ' << tensor.get_element_type() << '\n';
+    for (size_t i = 0; i < std::min(t_shape[t_shape.size() - 2], 3ul); ++i) {
+        for (size_t j = 0; j < std::min(t_shape.back(), 20ul); ++j) {
+            switch (tensor.get_element_type()) {
+                case ov::element::i64:
+                    std::cout << tensor.data<int64_t>()[t_shape.back() * i + j] << " ";
+                    break;
+                case ov::element::f32:
+                    std::cout << std::fixed << std::setprecision(1) << std::setw(3) << tensor.data<float>()[t_shape.back() * i + j] << " ";
+                    break;
+                case ov::element::u8:
+                    // + is to cast uint8_t to int for printing.
+                    std::cout << +tensor.data<uint8_t>()[t_shape.back() * i + j] << " ";
+                    break;
+                default:
+                    OPENVINO_THROW("Not implemented");
             }
         }
-        std::cout << "|";
+        std::cout << '\n';
     }
-    std::cout << "]" << std::endl;
 }
 
 /**
