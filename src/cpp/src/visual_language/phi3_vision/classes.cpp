@@ -587,7 +587,21 @@ EncodedImage VisionEncoderPhi3V::encode(const ov::Tensor& image, const ov::AnyMa
     ProcessorConfig config = utils::from_any_map(config_map, m_processor_config);
 
     const auto& [pixel_values, image_size] = get_pixel_values_phi3_v(image, config);
-    encoder.set_input_tensor(pixel_values);
+    encoder.set_tensor("pixel_values", pixel_values);
+    std::cout << pixel_values.get_shape() << '\n';
+    ov::Shape patch_attention_mask_shape = pixel_values.get_shape();
+    patch_attention_mask_shape.erase(patch_attention_mask_shape.begin() + 1);
+    std::cout << patch_attention_mask_shape << '\n';
+    ov::Tensor patch_attention_mask{ov::element::boolean, patch_attention_mask_shape};
+    std::fill_n(patch_attention_mask.data<bool>(), patch_attention_mask.get_size(), true);
+    encoder.set_tensor("patch_attention_mask", patch_attention_mask);
+    ov::Shape patch_position_ids_shape{patch_attention_mask_shape.at(0), patch_attention_mask_shape.at(1)};// * patch_attention_mask_shape.at(2)};
+    ov::Tensor patch_position_ids{ov::element::i64, patch_position_ids_shape};
+    for (size_t idx = 0; idx < patch_position_ids_shape.at(0); ++idx) {
+        std::iota(patch_position_ids.data<int64_t>() + idx * patch_position_ids_shape.at(1), patch_position_ids.data<int64_t>() + (idx + 1) * patch_position_ids_shape.at(1), 0);
+    }
+    encoder.set_tensor("patch_position_ids", patch_position_ids);
+    // encoder.set_input_tensor(pixel_values);
     ov::Tensor res{ov::element::f32, encoder.get_output_tensor().get_shape()};
     encoder.set_output_tensor(res);
     encoder.infer();
