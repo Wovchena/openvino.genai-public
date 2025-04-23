@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Intel Corporation
+// Copyright (C) 2023-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
 #pragma once
@@ -14,12 +14,15 @@
 #include "openvino/genai/streamer_base.hpp"
 #include "openvino/genai/perf_metrics.hpp"
 #include "openvino/genai/scheduler_config.hpp"
+#include "openvino/genai/common_types.hpp"
 
 namespace ov {
 namespace genai {
 
-// Return flag corresponds whether generation should be stopped: false means continue generation, true means stop.
-using StreamerVariant = std::variant<std::function<bool(std::string)>, std::shared_ptr<StreamerBase>, std::monostate>;
+// Return flag corresponds whether generation should be stopped. It could be:
+// ov::genai::StreamingStatus flag, RUNNING means continue generation, STOP means stop generation, CANCEL means stop generation and remove last propmt and answer from history
+// *DEPRECATED* bool flag, false means continue generation, true means stop. Please, use `ov::genai::StreamingStatus` instead.
+using StreamerVariant = std::variant<std::function<bool(std::string)>, std::function<StreamingStatus(std::string)>, std::shared_ptr<StreamerBase>, std::monostate>;
 using OptionalGenerationConfig = std::optional<GenerationConfig>;
 using EncodedInputs = std::variant<ov::Tensor, TokenizedInputs>;
 using StringInputs = std::variant<std::string, std::vector<std::string>>;
@@ -112,9 +115,14 @@ public:
         const ov::AnyMap& properties = {}
     );
 
-    OPENVINO_DEPRECATED("Please, specify device explicitly when create LLMPipeline. This overload will be removed in 2025.0.0 release")
-    explicit LLMPipeline(const std::filesystem::path& path) :
-        LLMPipeline(path, "CPU") { }
+    LLMPipeline(
+        const std::string& model_str,
+        const ov::Tensor& weights_tensor,
+        const ov::genai::Tokenizer& tokenizer,
+        const std::string& device,
+        const ov::AnyMap& properties = {},
+        const ov::genai::GenerationConfig& generation_config = {}
+    );
 
     /**
     * @brief Constructs an LLMPipeline from xml/bin files, tokenizers and configuration in the same dir.
@@ -144,7 +152,7 @@ public:
     LLMPipeline(
         const ov::InferRequest& request,
         const ov::genai::Tokenizer& tokenizer,
-        OptionalGenerationConfig generation_config=std::nullopt
+        OptionalGenerationConfig generation_config = std::nullopt
     );
 
     /**
@@ -163,10 +171,6 @@ public:
         const ov::AnyMap& properties = {}
     );
 
-    OPENVINO_DEPRECATED("Please, specify device explicitly when create LLMPipeline. This overload will be removed in 2025.0.0 release")
-    LLMPipeline(const std::filesystem::path& models_path, const ov::genai::Tokenizer& tokenizer) :
-        LLMPipeline(models_path, tokenizer, "CPU") { }
-
     ~LLMPipeline();
 
     /**
@@ -176,6 +180,8 @@ public:
     * @param generation_config optional GenerationConfig
     * @param streamer optional streamer
     * @return DecodedResults decoded resulting text
+    * chat_template will be applied to the prompt, run pipe.get_tokenizer().set_chat_template(custom_chat_template) to update it.
+    * To disable it for non-chat mode, please, use custom_chat_template eq "" or set generation_config.apply_chat_template to false.
     */
     DecodedResults generate(
         StringInputs inputs,
@@ -190,6 +196,8 @@ public:
     * @param inputs input prompt or a vector of prompts
     * @param properties properties
     * @return DecodedResults decoded resulting text
+    * chat_template will be applied to the prompt, run pipe.get_tokenizer().set_chat_template(custom_chat_template) to update it.
+    * To disable it for non-chat mode, please, use custom_chat_template eq "" or set generation_config.apply_chat_template to false.
     */
     template <typename... Properties>
     util::EnableIfAllStringAny<DecodedResults, Properties...> generate(
@@ -202,7 +210,7 @@ public:
 
     DecodedResults operator()(
         StringInputs inputs,
-        OptionalGenerationConfig generation_config=std::nullopt,
+        OptionalGenerationConfig generation_config = std::nullopt,
         StreamerVariant streamer=std::monostate()
     ) {
         return generate(inputs, generation_config, streamer);
@@ -255,7 +263,7 @@ public:
 
     /**
     * @brief start chat with keeping history in kv cache.
-    * Turns on keeping KV cache between generate calls and automatic applying of chat templates.
+    * Turns on keeping KV cache between generate calls.
     * In case if beam search is used, KV cache is kept for the generated sequence with maximal scores.
     *
     * @param system_message optional system message.
@@ -273,6 +281,14 @@ private:
 
 OPENVINO_GENAI_EXPORTS std::pair<std::string, Any> streamer(StreamerVariant func);
 OPENVINO_GENAI_EXPORTS std::pair<std::string, Any> generation_config(const GenerationConfig& config);
+
+OPENVINO_GENAI_EXPORTS std::pair<std::string, Any> draft_model(
+    std::string& model_str,
+    ov::Tensor& weights_tensor,
+    const ov::genai::Tokenizer& tokenizer,
+    const std::string& device = {},
+    const ov::AnyMap& properties = {},
+    const ov::genai::GenerationConfig& generation_config = {});
 
 OPENVINO_GENAI_EXPORTS std::pair<std::string, Any> draft_model(
     const std::filesystem::path& models_path,
@@ -302,6 +318,13 @@ inline std::pair<std::string, Any> draft_model(
 * And create LLMPipeline instance with this config.
 */
 static constexpr ov::Property<SchedulerConfig> scheduler_config{"scheduler_config"};
+
+/**
+* @brief enable prompt_lookup property serves to activate prompt lookup decoding.
+* Set `true` to activate this mode.
+* And create LLMPipeline instance with this config.
+*/
+static constexpr ov::Property<bool> prompt_lookup{"prompt_lookup"};
 
 }  // namespace genai
 }  // namespace ov

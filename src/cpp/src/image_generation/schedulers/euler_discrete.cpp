@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Intel Corporation
+// Copyright (C) 2023-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
 #include "image_generation/schedulers/euler_discrete.hpp"
@@ -204,6 +204,10 @@ void EulerDiscreteScheduler::set_timesteps(size_t num_inference_steps, float str
         // while return patched ones by 'strength' parameter
         m_timesteps = std::vector<int64_t>(m_timesteps.begin() + t_start, m_timesteps.end());
         m_begin_index = t_start;
+
+        OPENVINO_ASSERT(!m_timesteps.empty(),
+                        "After adjusting the num_inference_steps by strength parameter: ", strength,
+                        " the number of pipeline steps is less then 1 and not appropriate for this pipeline. Please set a different strength value.");
     }
 }
 
@@ -266,6 +270,8 @@ std::map<std::string, ov::Tensor> EulerDiscreteScheduler::step(ov::Tensor noise_
 }
 
 std::vector<int64_t> EulerDiscreteScheduler::get_timesteps() const {
+    OPENVINO_ASSERT(!m_timesteps.empty(), "'timesteps' have not yet been set.");
+
     return m_timesteps;
 }
 
@@ -301,17 +307,14 @@ size_t EulerDiscreteScheduler::_index_for_timestep(int64_t timestep) const {
     OPENVINO_THROW("Failed to find index for timestep ", timestep);
 }
 
-void EulerDiscreteScheduler::add_noise(ov::Tensor init_latent, std::shared_ptr<Generator> generator) const {
-    const int64_t latent_timestep = m_timesteps.front();
+void EulerDiscreteScheduler::add_noise(ov::Tensor init_latent, ov::Tensor noise, int64_t latent_timestep) const {
     const float sigma = m_sigmas[_index_for_timestep(latent_timestep)];
 
-    ov::Tensor rand_tensor = generator->randn_tensor(init_latent.get_shape());
-
     float * init_latent_data = init_latent.data<float>();
-    const float * rand_tensor_data = rand_tensor.data<float>();
+    const float * noise_data = noise.data<float>();
 
     for (size_t i = 0; i < init_latent.get_size(); ++i) {
-        init_latent_data[i] = init_latent_data[i] + sigma * rand_tensor_data[i];
+        init_latent_data[i] = init_latent_data[i] + sigma * noise_data[i];
     }
 }
 

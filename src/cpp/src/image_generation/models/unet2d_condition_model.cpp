@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Intel Corporation
+// Copyright (C) 2023-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
 #include "openvino/genai/image_generation/unet2d_condition_model.hpp"
@@ -30,8 +30,7 @@ UNet2DConditionModel::Config::Config(const std::filesystem::path& config_path) {
 
 UNet2DConditionModel::UNet2DConditionModel(const std::filesystem::path& root_dir) :
     m_config(root_dir / "config.json") {
-    ov::Core core = utils::singleton_core();
-    m_model = core.read_model((root_dir / "openvino_model.xml").string());
+    m_model = utils::singleton_core().read_model(root_dir / "openvino_model.xml");
     m_vae_scale_factor = get_vae_scale_factor(root_dir.parent_path() / "vae_decoder" / "config.json");
 }
 
@@ -47,8 +46,7 @@ UNet2DConditionModel::UNet2DConditionModel(const std::string& model,
                                            const Config& config,
                                            const size_t vae_scale_factor) :
     m_config(config), m_vae_scale_factor(vae_scale_factor) {
-    ov::Core core = utils::singleton_core();
-    m_model = core.read_model(model, weights);
+    m_model = utils::singleton_core().read_model(model, weights);
 }
 
 UNet2DConditionModel::UNet2DConditionModel(const std::string& model,
@@ -88,13 +86,12 @@ UNet2DConditionModel& UNet2DConditionModel::compile(const std::string& device, c
     }
 
     std::optional<AdapterConfig> adapters;
-    if (auto filtered_properties = extract_adapters_from_properties(properties, &adapters)) {
+    auto filtered_properties = extract_adapters_from_properties(properties, &adapters);
+    if (adapters) {
         adapters->set_tensor_name_prefix(adapters->get_tensor_name_prefix().value_or("lora_unet"));
         m_adapter_controller = AdapterController(m_model, *adapters, device);
-        m_impl->compile(m_model, device, *filtered_properties);
-    } else {
-        m_impl->compile(m_model, device, properties);
     }
+    m_impl->compile(m_model, device, *filtered_properties);
 
     // release the original model
     m_model.reset();

@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Intel Corporation
+// Copyright (C) 2023-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
 #include <filesystem>
@@ -53,40 +53,53 @@ py::object call_common_generate(
     const pyutils::PyBindStreamerVariant& py_streamer,
     const py::kwargs& kwargs
 ) {
-    ov::genai::GenerationConfig default_config;
-    if (config.has_value()) {
-        default_config = *config;
-    } else {
-        default_config = pipe.get_generation_config();
-    }
+    ov::genai::GenerationConfig default_config = config.has_value() ? *config : pipe.get_generation_config();
     auto updated_config = pyutils::update_config_from_kwargs(default_config, kwargs);
+
     py::object results;
-    EncodedInputs tensor_data;
     StreamerVariant streamer = pyutils::pystreamer_to_streamer(py_streamer);
 
     // Call suitable generate overload for each type of input.
     std::visit(pyutils::overloaded {
     [&](ov::Tensor ov_tensor) {
-        results = py::cast(pipe.generate(ov_tensor, updated_config, streamer));
+        ov::genai::EncodedResults encoded_results;
+        {
+            py::gil_scoped_release rel;
+            encoded_results = pipe.generate(ov_tensor, updated_config, streamer);
+        }
+        results = py::cast(encoded_results);
     },
     [&](TokenizedInputs tokenized_input) {
-        results = py::cast(pipe.generate(tokenized_input, updated_config, streamer));
+        ov::genai::EncodedResults encoded_results;
+        {
+            py::gil_scoped_release rel;
+            encoded_results = pipe.generate(tokenized_input, updated_config, streamer);
+        }
+        results = py::cast(encoded_results);
     },
     [&](std::string string_input) {
-        DecodedResults res = pipe.generate(string_input, updated_config, streamer);
+        DecodedResults res;
+        {
+            py::gil_scoped_release rel;
+            res = pipe.generate(string_input, updated_config, streamer);
+        }
         // If input was a string return a single string otherwise return DecodedResults.
         if (updated_config.has_value() && (*updated_config).num_return_sequences == 1) {
-            results = py::cast<py::object>(pyutils::handle_utf8(res.texts)[0]);
+            results = py::cast<py::object>(pyutils::handle_utf8(res.texts[0]));
         } else {
             results = py::cast(res);
         }
     },
     [&](std::vector<std::string> string_input) {
         // For DecodedResults texts getter already handles utf8 decoding.
-        results = py::cast(pipe.generate(string_input, updated_config, streamer));
+        DecodedResults res;
+        {
+            py::gil_scoped_release rel;
+            res = pipe.generate(string_input, updated_config, streamer);
+        }
+        results = py::cast(res);
     }},
     inputs);
-
     return results;
 }
 
@@ -157,6 +170,36 @@ void init_llm_pipeline(py::module_& m) {
             kwargs: Device properties.
         )")
 
+        .def(py::init([](
+            const std::string& model,
+            const ov::Tensor& weights,
+            const ov::genai::Tokenizer& tokenizer,
+            const std::string& device,
+            OptionalGenerationConfig generation_config,
+            const py::kwargs& kwargs
+        ) {
+            ScopedVar env_manager(pyutils::ov_tokenizers_module_path());
+            ov::AnyMap properties = pyutils::kwargs_to_any_map(kwargs);
+            if (!generation_config.has_value()) {
+                generation_config = ov::genai::GenerationConfig();
+            }
+            return std::make_unique<LLMPipeline>(model, weights, tokenizer, device, properties, *generation_config);
+        }),
+        py::arg("model"), "string with pre-read model",
+        py::arg("weights"), "ov::Tensor with pre-read model weights",
+        py::arg("tokenizer"), "genai Tokenizers",
+        py::arg("device"), "device on which inference will be done",
+        py::arg("generation_config") = py::none(), "genai GenerationConfig (default: None, will use empty config)",
+        R"(
+            LLMPipeline class constructor.
+            model (str): Pre-read model.
+            weights (ov.Tensor): Pre-read model weights.
+            tokenizer (str): Genai Tokenizers.
+            device (str): Device to run the model on (e.g., CPU, GPU).
+            generation_config {ov_genai.GenerationConfig} Genai GenerationConfig. Default is an empty config.
+            kwargs: Device properties.
+        )")
+
         .def(
             "generate",
             [](LLMPipeline& pipe,
@@ -195,14 +238,14 @@ void init_llm_pipeline(py::module_& m) {
         .def("get_generation_config", &LLMPipeline::get_generation_config, py::return_value_policy::copy)
         .def("set_generation_config", &LLMPipeline::set_generation_config, py::arg("config"));
 
-    py::class_<ov::Any>(m, "draft_model", py::module_local(), "This class is used to enable Speculative Decoding")
-        .def(py::init([](
+    m.def("draft_model", [](
             const std::filesystem::path& models_path,
             const std::string& device,
             const py::kwargs& kwargs
         ) {
+            ScopedVar env_manager(pyutils::ov_tokenizers_module_path());
             return draft_model(models_path, device, pyutils::kwargs_to_any_map(kwargs)).second;
-        }),
+        },
         py::arg("models_path"), "folder with openvino_model.xml and openvino_tokenizer[detokenizer].xml files",
         py::arg("device") = "", "device on which inference will be performed");
 }

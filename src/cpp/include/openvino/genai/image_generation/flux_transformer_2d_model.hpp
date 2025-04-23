@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Intel Corporation
+// Copyright (C) 2023-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
 #pragma once
@@ -10,6 +10,7 @@
 #include "openvino/runtime/infer_request.hpp"
 #include "openvino/runtime/properties.hpp"
 #include "openvino/runtime/tensor.hpp"
+#include "openvino/genai/lora_adapter.hpp"
 
 #include "openvino/genai/visibility.hpp"
 
@@ -18,8 +19,9 @@ namespace genai {
 
 class OPENVINO_GENAI_EXPORTS FluxTransformer2DModel {
 public:
-    struct Config {
+    struct OPENVINO_GENAI_EXPORTS Config {
         size_t in_channels = 64;
+        bool guidance_embeds = false;
         size_t m_default_sample_size = 128;
 
         explicit Config(const std::filesystem::path& config_path);
@@ -68,16 +70,19 @@ public:
 
     template <typename... Properties>
     ov::util::EnableIfAllStringAny<FluxTransformer2DModel&, Properties...> compile(const std::string& device,
-                                                                                  Properties&&... properties) {
+                                                                                   Properties&&... properties) {
         return compile(device, ov::AnyMap{std::forward<Properties>(properties)...});
     }
 
     void set_hidden_states(const std::string& tensor_name, ov::Tensor encoder_hidden_states);
 
+    void set_adapters(const std::optional<AdapterConfig>& adapters);
+
     ov::Tensor infer(const ov::Tensor latent, const ov::Tensor timestep);
 
 private:
     Config m_config;
+    AdapterController m_adapter_controller;
     ov::InferRequest m_request;
     std::shared_ptr<ov::Model> m_model;
     size_t m_vae_scale_factor;
