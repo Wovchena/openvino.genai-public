@@ -5,13 +5,13 @@
 
 #include <iostream>
 #include <openvino/openvino.hpp>
-#include <regex>
 #include <thread>
 
 #include "context_tokens.hpp"
 #include "logit_processor.hpp"
 #include "models/decoder.hpp"
 #include "openvino/genai/perf_metrics.hpp"
+#include "openvino/genai/streamer_base.hpp"
 #include "openvino/genai/whisper_generation_config.hpp"
 #include "openvino/genai/whisper_pipeline.hpp"
 #include "sampler.hpp"
@@ -21,7 +21,6 @@
 #include "whisper_feature_extractor.hpp"
 #include "whisper_models.hpp"
 #include "whisper_utils.hpp"
-#include "openvino/genai/streamer_base.hpp"
 
 using ov::genai::MicroSeconds;
 
@@ -66,18 +65,16 @@ std::pair<ov::genai::EncodedResults, bool> decode(std::shared_ptr<ov::genai::Whi
         }
 
         std::unordered_map<uint64_t, ov::genai::GenerationOutput> token = handle->read();
-        for (const auto& gen_token : token.begin()->second.generated_ids) {
-            auto streaming_status = streamer_ptr->write(gen_token);
-            if (streaming_status != ov::genai::StreamingStatus::RUNNING) {
-                streaming_status == ov::genai::StreamingStatus::CANCEL ? handle->cancel() : handle->stop();
-                break;
-            }
+
+        auto streaming_status = streamer_ptr->write(token.begin()->second.generated_ids);
+        if (streaming_status != ov::genai::StreamingStatus::RUNNING) {
+            streaming_status == ov::genai::StreamingStatus::CANCEL ? handle->cancel() : handle->stop();
         }
     };
 
     const size_t batch_size = 1;
 
-    ov::Tensor beam_idx = ov::Tensor(ov::element::i32, {batch_size});
+    ov::Tensor beam_idx = decoder->create_host_tensor(ov::element::i32, {batch_size});
     std::fill_n(beam_idx.data<int32_t>(), batch_size, 0);
 
     const ov::Tensor input_ids_tensor{ov::element::i64, {1, input_ids.size()}, (void*)input_ids.data()};
@@ -104,7 +101,8 @@ std::pair<ov::genai::EncodedResults, bool> decode(std::shared_ptr<ov::genai::Whi
     stream_generated_tokens();
 
     // "Generation" phase
-    while (!sequence_group->has_finished() && !sequence_group->handle_stopped() && !sequence_group->handle_cancelled()) {
+    while (!sequence_group->has_finished() && !sequence_group->handle_stopped() &&
+           !sequence_group->handle_cancelled()) {
         std::map<size_t, std::vector<int64_t>> batch_to_generated_ids{};
 
         sequence_group->schedule_tokens(1);
@@ -268,7 +266,7 @@ WhisperGenerateResult whisper_generate(const ov::genai::WhisperGenerationConfig&
                                        ov::InferRequest& encoder,
                                        std::shared_ptr<WhisperDecoder> decoder,
                                        WhisperFeatureExtractor& feature_extractor,
-                                       const std::shared_ptr<ChunkStreamerBase> streamer,
+                                       const std::shared_ptr<StreamerBase> streamer,
                                        Sampler& sampler) {
     size_t max_new_tokens = config.get_max_new_tokens();
 
@@ -297,7 +295,14 @@ WhisperGenerateResult whisper_generate(const ov::genai::WhisperGenerationConfig&
     const float time_precision = static_cast<float>(feature_extractor.chunk_length) / model_config.max_source_positions;
     size_t segment_offset = 0;
 
+    OPENVINO_ASSERT(feature_extractor.sampling_rate != 0, "Sampling Rate for Feature Extractor is 0");
+    const float frame_length_in_seconds =
+        static_cast<float>(feature_extractor.hop_length) / feature_extractor.sampling_rate;
+
     for (size_t chunk_offset = 0; chunk_offset < input_features.n_frames; chunk_offset += segment_offset) {
+
+        const float chunk_time_offset = chunk_offset * frame_length_in_seconds;
+
         auto input_features_chunk = input_features.get_data_with_offset(chunk_offset, feature_extractor.nb_max_frames);
 
         ov::Tensor hidden_state_tensor = encode(encoder,
@@ -332,7 +337,8 @@ WhisperGenerateResult whisper_generate(const ov::genai::WhisperGenerationConfig&
             auto extracted_segments = ov::genai::extract_segments(chunk_output_tokens,
                                                                   config,
                                                                   feature_extractor.nb_max_frames,
-                                                                  time_precision);
+                                                                  time_precision,
+                                                                  chunk_time_offset);
 
             utils::filter_non_segment_metrics(raw_metrics, output_tokens.size(), extracted_segments.segment_ranges);
 
@@ -342,7 +348,8 @@ WhisperGenerateResult whisper_generate(const ov::genai::WhisperGenerationConfig&
                                  extracted_segments.non_timestamp_tokens.begin(),
                                  extracted_segments.non_timestamp_tokens.end());
 
-            if (streamer && streamer->write_chunk(extracted_segments.non_timestamp_tokens) != ov::genai::StreamingStatus::RUNNING) {
+            if (streamer &&
+                streamer->write(extracted_segments.non_timestamp_tokens) != ov::genai::StreamingStatus::RUNNING) {
                 cancelled = true;
                 break;
             }
