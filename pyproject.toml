@@ -57,7 +57,7 @@ requires = [
     "openvino~=2025.2.0.0.dev",
     "pybind11-stubgen==2.5.4",
     "cmake~=3.23.0; platform_system != 'Darwin' or platform_machine == 'x86_64'",
-    "cmake~=3.24.0; platform_system == 'Darwin' and platform_machine == 'arm64'",
+    "cmake~=4.0.3; platform_system == 'Darwin' and platform_machine == 'arm64'",
 ]
 build-backend = "py_build_cmake.build"
 
