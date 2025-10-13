@@ -43,7 +43,9 @@ int main(int32_t argc, char* argv[]) {
     // TODO: Rename image->video everywhere
     // TODO: test multiple videos per prompt
     // TODO: test with different config values
-    // TODO: test log prompts to check truncation
+    // TODO: test long prompts to check truncation
+    // Test multithreaded clone(). Should clone() be guarded with mutex?
+    // Test model import/export
     // TODO: throw if num_frames isn't devisable by 8 + 1. Similar value for resolution. The model works on resolutions that are divisible by 32 and number of frames that are divisible by 8 + 1 (e.g. 257). The model works best on resolutions under 720 x 1280 and number of frames below 257.
     // OVLTXPipeline()(num_inference_steps=1) fails. 2 passes. Would be nice to avoid that bug in genai.
     // Verify tiny resolution like 32x32
