@@ -34,6 +34,9 @@ CMakeUserPresets.json
 *.swp
 /config.xml
 
+# CodeQL analysis artifacts
+_codeql_detected_source_root
+
 # Python-specific
 *.?env*
 *.pyc
