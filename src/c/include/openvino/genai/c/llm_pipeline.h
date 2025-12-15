@@ -145,9 +145,11 @@ OPENVINO_GENAI_C_EXPORTS ov_status_e ov_genai_llm_pipeline_generate(ov_genai_llm
 /**
  * @brief Start chat with keeping history in kv cache.
  * @param pipe A pointer to the ov_genai_llm_pipeline instance.
+ * @param system_message Optional system message. Can be NULL or an empty string.
  * @return Status code of the operation: OK(0) for success.
  */
-OPENVINO_GENAI_C_EXPORTS ov_status_e ov_genai_llm_pipeline_start_chat(ov_genai_llm_pipeline* pipe);
+OPENVINO_GENAI_C_EXPORTS ov_status_e ov_genai_llm_pipeline_start_chat(ov_genai_llm_pipeline* pipe,
+                                                                      const char* system_message);
 
 /**
  * @brief Finish chat and clear kv cache.

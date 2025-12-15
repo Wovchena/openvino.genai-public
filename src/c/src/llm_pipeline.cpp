@@ -144,12 +144,13 @@ ov_status_e ov_genai_llm_pipeline_generate(ov_genai_llm_pipeline* pipe,
     }
     return ov_status_e::OK;
 }
-ov_status_e ov_genai_llm_pipeline_start_chat(ov_genai_llm_pipeline* pipe) {
+ov_status_e ov_genai_llm_pipeline_start_chat(ov_genai_llm_pipeline* pipe, const char* system_message) {
     if (!pipe || !(pipe->object)) {
         return ov_status_e::INVALID_C_PARAM;
     }
     try {
-        pipe->object->start_chat();
+        std::string system_msg = system_message ? std::string(system_message) : std::string();
+        pipe->object->start_chat(system_msg);
     } catch (...) {
         return ov_status_e::UNKNOW_EXCEPTION;
     }

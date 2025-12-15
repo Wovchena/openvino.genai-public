@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
     CHECK_STATUS(ov_genai_generation_config_create(&config));
     CHECK_STATUS(ov_genai_generation_config_set_max_new_tokens(config, 100));
 
-    CHECK_STATUS(ov_genai_llm_pipeline_start_chat(pipeline));
+    CHECK_STATUS(ov_genai_llm_pipeline_start_chat(pipeline, NULL));
     printf("question:\n");
     while (fgets(prompt, MAX_PROMPT_LENGTH, stdin)) {
         prompt[strcspn(prompt, "\n")] = 0;
