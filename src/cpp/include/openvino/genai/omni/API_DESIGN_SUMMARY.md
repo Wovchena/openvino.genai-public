@@ -18,12 +18,23 @@ This document summarizes the proposed API design for Omni-modal models in OpenVI
 
 Main pipeline class for loading and running omni-modal models.
 
+**Execution Modes:**
+- **Regular mode**: Single request processing, optimized for lowest latency
+- **ContinuousBatching mode**: Multiple concurrent requests, optimized for throughput
+
+The pipeline automatically selects the appropriate mode based on:
+- Explicit SchedulerConfig in properties → ContinuousBatching
+- Paged Attention backend detection (if model supports it) → ContinuousBatching
+- NPU device → Always regular mode
+- Otherwise → Regular mode
+
 **Key Features:**
 - Multiple constructors (from filesystem, from models map)
 - Overloaded `generate()` methods for different input combinations
 - Chat mode support (`start_chat()`, `finish_chat()`)
 - Configuration management
 - Property-based API for flexible usage
+- Dual-mode architecture (OmniPipelineImpl and OmniContinuousBatchingAdapter)
 
 **Supported Input Combinations:**
 - Text only
@@ -89,6 +100,35 @@ Results structure containing generated outputs and metrics.
 - `audio_channels`: Number of audio channels (1=mono, 2=stereo)
 - `omni_perf_metrics`: Omni-specific performance metrics
 
+### 5. OmniContinuousBatchingAdapter (continuous_batching_adapter.hpp)
+
+Adapter class that enables ContinuousBatching mode for OmniPipeline.
+
+**Purpose:**
+- Wraps ContinuousBatchingPipeline to provide high-throughput batch processing
+- Automatically selected based on configuration and device capabilities
+- Implements same interface as regular OmniPipelineImpl
+
+**Benefits:**
+- **Higher throughput**: Process multiple requests concurrently
+- **Efficient KV-cache**: Paged attention with dynamic memory management
+- **Request queueing**: Automatic batching and scheduling
+- **Better utilization**: Maximize GPU/CPU resource usage
+
+**Usage:**
+```cpp
+// Explicit ContinuousBatching mode
+ov::genai::SchedulerConfig scheduler_config;
+scheduler_config.max_num_batched_tokens = 512;
+scheduler_config.cache_size = 8;
+
+ov::AnyMap properties;
+properties.insert(ov::genai::scheduler_config(scheduler_config));
+
+ov::genai::OmniPipeline pipe("model", "GPU", properties);
+// Now using OmniContinuousBatchingAdapter internally
+```
+
 ## Use Cases
 
 ### 1. Text-to-Text (Standard LLM)
@@ -134,6 +174,31 @@ ov::genai::OmniGenerationConfig config;
 config.output_modality = "text+audio";
 auto result = pipe.generate("Tell me a story", config);
 // Use both result.texts[0] and result.audio.value()
+```
+
+### 7. High-Throughput Batch Processing
+```cpp
+// Enable ContinuousBatching for multiple concurrent requests
+ov::genai::SchedulerConfig scheduler_config;
+scheduler_config.max_num_batched_tokens = 512;
+scheduler_config.cache_size = 8;
+
+ov::AnyMap properties;
+properties.insert(ov::genai::scheduler_config(scheduler_config));
+
+ov::genai::OmniPipeline pipe("model", "GPU", properties);
+
+// Process multiple requests - automatically batched and scheduled
+std::vector<std::string> prompts = {
+    "Summarize this document",
+    "Translate to Spanish",
+    "What is quantum computing?"
+};
+
+for (const auto& prompt : prompts) {
+    auto result = pipe.generate(prompt);
+    std::cout << result.texts[0] << "\n\n";
+}
 ```
 
 ## Python Bindings
@@ -238,21 +303,24 @@ The API is designed for future extensions:
 | Audio Output | ✗ | ✗ | ✗ | ✓ |
 | Chat Mode | ✓ | ✓ | ✗ | ✓ |
 | Streaming | ✓ | ✓ | ✗ | ✓ |
+| ContinuousBatching | ✓ | ✓ | ✗ | ✓ |
 
 ## Files Structure
 
 ```
 src/cpp/include/openvino/genai/omni/
-├── pipeline.hpp                   # Main OmniPipeline API
-├── omni_generation_config.hpp    # Configuration
-├── perf_metrics.hpp               # Performance metrics
-├── py_bindings_example.cpp       # Python bindings structure
-└── README.md                      # Comprehensive documentation
+├── pipeline.hpp                      # Main OmniPipeline API with dual-mode support
+├── omni_generation_config.hpp       # Configuration
+├── perf_metrics.hpp                  # Performance metrics
+├── continuous_batching_adapter.hpp  # ContinuousBatching adapter implementation
+├── py_bindings_example.cpp          # Python bindings structure
+├── README.md                         # Comprehensive documentation
+└── API_DESIGN_SUMMARY.md            # Complete design rationale
 
 samples/cpp/omni_chat/
-├── omni_chat.cpp                 # C++ sample
-├── CMakeLists.txt                # Build configuration
-└── README.md                     # Sample documentation
+├── omni_chat.cpp                    # C++ sample
+├── CMakeLists.txt                   # Build configuration
+└── README.md                        # Sample documentation
 ```
 
 ## Next Steps
@@ -260,13 +328,15 @@ samples/cpp/omni_chat/
 For implementation:
 
 1. Implement C++ core logic following VLMPipeline patterns
-2. Add Python bindings following existing binding structure
-3. Create tests for each modality combination
-4. Add model conversion utilities
-5. Write comprehensive documentation
-6. Optimize for performance
-7. Add continuous batching support
+2. Implement OmniContinuousBatchingAdapter for high-throughput mode
+3. Add decision logic for automatic mode selection (regular vs continuous batching)
+4. Add Python bindings following existing binding structure
+5. Create tests for each modality combination and both execution modes
+6. Add model conversion utilities
+7. Write comprehensive documentation
+8. Optimize for performance
+9. Add benchmarks comparing regular and continuous batching modes
 
 ## Conclusion
 
-The proposed Omni API provides a clean, consistent, and powerful interface for omni-modal models in OpenVINO GenAI. It follows established patterns while introducing necessary new capabilities for handling multiple input and output modalities in a unified way.
+The proposed Omni API provides a clean, consistent, and powerful interface for omni-modal models in OpenVINO GenAI. It follows established patterns while introducing necessary new capabilities for handling multiple input and output modalities in a unified way. The dual-mode architecture (regular and ContinuousBatching) ensures optimal performance for both low-latency single-request and high-throughput batch processing scenarios.

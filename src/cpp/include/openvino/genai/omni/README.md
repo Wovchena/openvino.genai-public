@@ -9,10 +9,11 @@ The Omni API provides a unified interface for models that support:
 - **Output modalities**: Text, Audio, or both simultaneously
 - **Conversational context**: Maintains chat history across modalities
 - **Streaming**: Real-time text and audio streaming
+- **Dual execution modes**: Regular and ContinuousBatching for different workloads
 
 ## Architecture
 
-The API consists of three main components:
+The API consists of three main components plus continuous batching support:
 
 ### 1. OmniPipeline
 The main pipeline class for loading and running omni-modal models.
@@ -22,6 +23,10 @@ The main pipeline class for loading and running omni-modal models.
 
 ov::genai::OmniPipeline pipe("path/to/model", "CPU");
 ```
+
+The pipeline automatically selects between two execution modes:
+- **Regular mode**: Single request processing, lowest latency
+- **ContinuousBatching mode**: Multiple concurrent requests, higher throughput
 
 ### 2. OmniGenerationConfig
 Configuration for generation with omni-specific parameters.
@@ -45,6 +50,34 @@ if (result.audio.has_value()) {
     auto& audio_samples = result.audio.value();
 }
 ```
+
+### 4. ContinuousBatching Support
+For high-throughput scenarios, the pipeline can operate in ContinuousBatching mode.
+
+**Automatic Selection:**
+The pipeline automatically uses ContinuousBatching when:
+- SchedulerConfig is explicitly provided in properties
+- Paged Attention backend is available and model supports it
+- Device is not NPU (NPU always uses regular mode)
+
+**Explicit Usage:**
+```cpp
+ov::genai::SchedulerConfig scheduler_config;
+scheduler_config.max_num_batched_tokens = 256;
+scheduler_config.cache_size = 4;
+
+ov::AnyMap properties;
+properties.insert(ov::genai::scheduler_config(scheduler_config));
+
+ov::genai::OmniPipeline pipe("model_path", "GPU", properties);
+// Now running in ContinuousBatching mode for better throughput
+```
+
+**Benefits of ContinuousBatching:**
+- Higher throughput for multiple concurrent requests
+- Efficient KV-cache management via paging
+- Dynamic batching with request queueing
+- Better GPU/CPU utilization
 
 ## Usage Examples
 
@@ -114,6 +147,36 @@ std::cout << "Text: " << result.texts[0] << std::endl;
 std::cout << "Audio length: " << result.audio->size() / result.audio_sample_rate << "s" << std::endl;
 ```
 
+### Batch Processing with ContinuousBatching
+```cpp
+#include "openvino/genai/scheduler_config.hpp"
+
+// Configure for batch processing
+ov::genai::SchedulerConfig scheduler_config;
+scheduler_config.max_num_batched_tokens = 512;
+scheduler_config.cache_size = 8;  // GB
+scheduler_config.block_size = 32;
+scheduler_config.dynamic_split_fuse = true;
+
+ov::AnyMap properties;
+properties.insert(ov::genai::scheduler_config(scheduler_config));
+
+ov::genai::OmniPipeline pipe("gpt4o-model", "GPU", properties);
+
+// Process multiple requests efficiently
+std::vector<std::string> prompts = {
+    "Summarize this image",
+    "What's the weather like?",
+    "Translate to French: Hello"
+};
+
+for (const auto& prompt : prompts) {
+    // ContinuousBatching automatically queues and batches requests
+    auto result = pipe.generate(prompt, config);
+    std::cout << result.texts[0] << std::endl;
+}
+```
+
 ## Python API
 
 ```python
@@ -151,6 +214,24 @@ pipe.start_chat()
 result1 = pipe.generate("Hi there!", image=image)
 result2 = pipe.generate("What else can you see?")
 pipe.finish_chat()
+
+# Batch processing with ContinuousBatching
+from openvino_genai import SchedulerConfig
+
+scheduler_config = SchedulerConfig()
+scheduler_config.max_num_batched_tokens = 512
+scheduler_config.cache_size = 8
+
+pipe = ov_genai.OmniPipeline(
+    "model_path", 
+    "GPU",
+    scheduler_config=scheduler_config
+)
+
+prompts = ["Question 1", "Question 2", "Question 3"]
+for prompt in prompts:
+    result = pipe.generate(prompt)
+    print(result.texts[0])
 ```
 
 ## Configuration Options
@@ -167,6 +248,28 @@ pipe.finish_chat()
 | `audio_temperature` | float | 1.0 | Temperature for audio generation randomness |
 
 All standard `GenerationConfig` parameters are also supported (max_new_tokens, temperature, top_p, etc.).
+
+### SchedulerConfig Parameters (for ContinuousBatching)
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `max_num_batched_tokens` | size_t | - | Maximum tokens to batch together |
+| `cache_size` | size_t | - | KV-cache size in GB |
+| `block_size` | size_t | 32 | Block size for paged attention |
+| `dynamic_split_fuse` | bool | true | Enable dynamic request splitting/fusing |
+| `max_num_seqs` | size_t | - | Maximum number of sequences to process |
+| `enable_prefix_caching` | bool | false | Enable prefix caching optimization |
+
+To use ContinuousBatching mode:
+```cpp
+ov::genai::SchedulerConfig scheduler_config;
+scheduler_config.max_num_batched_tokens = 512;
+scheduler_config.cache_size = 8;
+
+ov::AnyMap properties;
+properties.insert(ov::genai::scheduler_config(scheduler_config));
+ov::genai::OmniPipeline pipe("model", "GPU", properties);
+```
 
 ## Performance Metrics
 

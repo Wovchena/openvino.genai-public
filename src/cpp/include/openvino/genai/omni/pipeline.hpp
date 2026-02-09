@@ -408,9 +408,108 @@ public:
      */
     void set_generation_config(const OmniGenerationConfig& new_config);
 
-private:
+protected:
+    // Base class for pipeline implementations (regular and continuous batching)
+    class OmniPipelineBase {
+    public:
+        virtual ~OmniPipelineBase() = default;
+
+        // Pure virtual methods that implementations must provide
+        virtual OmniDecodedResults generate(
+            const std::string& prompt,
+            const OmniGenerationConfig& generation_config,
+            const StreamerVariant& streamer
+        ) = 0;
+
+        virtual OmniDecodedResults generate(
+            const std::string& prompt,
+            const std::vector<ov::Tensor>& images,
+            const OmniGenerationConfig& generation_config,
+            const StreamerVariant& streamer
+        ) = 0;
+
+        virtual OmniDecodedResults generate(
+            const std::string& prompt,
+            const ov::Tensor& image,
+            const OmniGenerationConfig& generation_config,
+            const StreamerVariant& streamer
+        ) = 0;
+
+        virtual OmniDecodedResults generate(
+            const std::string& prompt,
+            const RawAudioInput& audio,
+            const OmniGenerationConfig& generation_config,
+            const StreamerVariant& streamer
+        ) = 0;
+
+        virtual OmniDecodedResults generate(
+            const std::string& prompt,
+            const std::vector<ov::Tensor>& images,
+            const RawAudioInput& audio,
+            const OmniGenerationConfig& generation_config,
+            const StreamerVariant& streamer
+        ) = 0;
+
+        virtual OmniDecodedResults generate(
+            const std::string& prompt,
+            const std::vector<ov::Tensor>& images,
+            const std::vector<ov::Tensor>& videos,
+            const RawAudioInput& audio,
+            const OmniGenerationConfig& generation_config,
+            const StreamerVariant& streamer
+        ) = 0;
+
+        virtual OmniDecodedResults generate(
+            const ChatHistory& history,
+            const OmniGenerationConfig& generation_config,
+            const StreamerVariant& streamer
+        ) = 0;
+
+        virtual OmniDecodedResults generate(
+            const ChatHistory& history,
+            const std::vector<ov::Tensor>& images,
+            const OmniGenerationConfig& generation_config,
+            const StreamerVariant& streamer
+        ) = 0;
+
+        virtual OmniDecodedResults generate(
+            const ChatHistory& history,
+            const RawAudioInput& audio,
+            const OmniGenerationConfig& generation_config,
+            const StreamerVariant& streamer
+        ) = 0;
+
+        virtual OmniDecodedResults generate(
+            const ChatHistory& history,
+            const std::vector<ov::Tensor>& images,
+            const std::vector<ov::Tensor>& videos,
+            const RawAudioInput& audio,
+            const OmniGenerationConfig& generation_config,
+            const StreamerVariant& streamer
+        ) = 0;
+
+        virtual void start_chat(const std::string& system_message) = 0;
+        virtual void finish_chat() = 0;
+        virtual void set_chat_template(const std::string& new_template) = 0;
+        virtual Tokenizer get_tokenizer() const = 0;
+        virtual OmniGenerationConfig get_generation_config() const = 0;
+        virtual void set_generation_config(const OmniGenerationConfig& new_config) = 0;
+
+        virtual void set_load_time(float load_time) { m_load_time = load_time; }
+        virtual float get_load_time() const { return m_load_time; }
+
+    protected:
+        float m_load_time = 0.0f;
+    };
+
+    // Regular implementation (to be defined in implementation file)
     class OmniPipelineImpl;
-    std::unique_ptr<OmniPipelineImpl> m_pimpl;
+    
+    // Continuous batching adapter (forward declaration)
+    class OmniContinuousBatchingAdapter;
+
+private:
+    std::unique_ptr<OmniPipelineBase> m_pimpl;
 };
 
 /**
