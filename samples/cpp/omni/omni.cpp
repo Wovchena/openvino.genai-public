@@ -12,6 +12,18 @@ namespace ov::genai {
 
 // generate return value = what to return from get_generation_config()
 // Avoid loading needless pieces
+// Let users implement generate() token by token - from llama.cpp
+// Return dict[str->[tensor, float, str]] (transformers) vs inheritance (my idea) vs optional members (llama.cpp) in return type
+// streaming https://github.com/OpenBMB/MiniCPM-V
+// try AnytoAnyPipeline with omni mdels
+// find the model that generates text and images
+// ask LLMs about multimodal and omni
+// https://github.com/GeeeekExplorer/nano-vllm - no omni support
+// https://docs.ollama.com/capabilities/vision - no omni
+// vLLM-omni has prompt_embeds and additional_information members but could just be additional_information which is Any
+// What model output to append to history
+// Tokenizer + embedding layer is just one modality example
+// What is the model state in terms of modalities
 class AnyToAnyPipeline {
 public:
     explicit AnyToAnyPipeline(const std::filesystem::path& models_dir) {}
@@ -22,6 +34,61 @@ public:
     template <typename... Properties, typename std::enable_if<ov::util::StringAny<Properties...>::value, bool>::type = true>
     AnyToAnyPipeline(const std::filesystem::path& models_dir, const std::string& device, Properties&&... properties)
         : AnyToAnyPipeline(models_dir, device, ov::AnyMap{std::forward<Properties>(properties)...}) {}
+        VLMPipeline(
+        const ModelsMap& models_map,
+        const Tokenizer& tokenizer,
+        const std::filesystem::path& config_dir_path,
+        const std::string& device,
+        const ov::AnyMap& properties = {},
+        const ov::genai::GenerationConfig& generation_config = {}
+    );
+    template <typename... Properties, typename std::enable_if<ov::util::StringAny<Properties...>::value, bool>::type = true>
+    VLMPipeline(
+        const std::filesystem::path& models_path,
+        const std::string& device,
+        Properties&&... properties)
+        : VLMPipeline(models_path, device, ov::AnyMap{std::forward<Properties>(properties)...}) { }
+
+    ContinuousBatchingPipeline(const std::filesystem::path& models_path,
+                               const SchedulerConfig& scheduler_config,
+                               const std::string& device,
+                               const ov::AnyMap& properties = {},
+                               const ov::AnyMap& tokenizer_properties = {},
+                               const ov::AnyMap& vision_encoder_properties = {});
+    ContinuousBatchingPipeline(
+        const std::filesystem::path& models_path,
+        const ov::genai::Tokenizer& tokenizer,
+        const SchedulerConfig& scheduler_config,
+        const std::string& device,
+        const ov::AnyMap& properties = {}
+    );
+    ContinuousBatchingPipeline(
+        const std::string& model_str,
+        const ov::Tensor& weights_tensor,
+        const ov::genai::Tokenizer& tokenizer,
+        const SchedulerConfig& scheduler_config,
+        const std::string& device,
+        const ov::AnyMap& properties = {},
+        const ov::genai::GenerationConfig& generation_config = {}
+    );
+    ContinuousBatchingPipeline(
+        const ModelsMap& models_map,
+        const ov::genai::Tokenizer& tokenizer,
+        const SchedulerConfig& scheduler_config,
+        const std::string& device,
+        std::optional<std::filesystem::path> embedder_config_dir_path = std::nullopt,
+        const ov::AnyMap& properties = {},
+        const ov::genai::GenerationConfig& generation_config = {}
+    );
+
+    GenerationHandle add_request(uint64_t request_id, const ov::Tensor& input_ids, const ov::genai::GenerationConfig& sampling_params);
+    GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const ov::genai::GenerationConfig& sampling_params);
+    GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const std::vector<ov::Tensor>& images, const std::vector<ov::Tensor>& videos, const ov::genai::GenerationConfig& sampling_params);
+    GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const std::vector<ov::Tensor>& images, const ov::genai::GenerationConfig& sampling_params);
+
+    void step();
+
+    bool has_non_finished_requests();
 
     const VideoGenerationConfig get_generation_config() const {}
     void set_generation_config(const VideoGenerationConfig& generation_config) {}
@@ -42,6 +109,130 @@ public:
     template <typename... Properties> ov::util::EnableIfAllStringAny<VideoGenerationResult, Properties...> generate(
         const std::string& positive_prompt, Properties&&... properties
     ) {return generate(positive_prompt, ov::AnyMap{std::forward<Properties>(properties)...});}
+    VLMDecodedResults generate(
+        const std::string& prompt,
+        const std::vector<ov::Tensor>& images,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    );
+    VLMDecodedResults generate(
+        const std::string& prompt,
+        const std::vector<ov::Tensor>& images,
+        const std::vector<ov::Tensor>& videos,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    );
+    VLMDecodedResults generate(
+        const std::string& prompt,
+        const ov::Tensor& image,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    );
+    VLMDecodedResults generate(
+        const std::string& prompt,
+        const ov::AnyMap& config_map
+    );
+    template <typename... Properties>
+    util::EnableIfAllStringAny<VLMDecodedResults, Properties...> generate(
+        const std::string& prompt,
+        Properties&&... properties
+    ) {
+        return generate(
+            prompt, AnyMap{std::forward<Properties>(properties)...}
+        );
+    }
+    VLMDecodedResults generate(
+        const ChatHistory& history,
+        const std::vector<ov::Tensor>& images,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    );
+    VLMDecodedResults generate(
+        const ChatHistory& history,
+        const std::vector<ov::Tensor>& images,
+        const std::vector<ov::Tensor>& videos,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    );
+    VLMDecodedResults generate(
+        const ChatHistory& history,
+        const ov::Tensor& image,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    );
+    VLMDecodedResults generate(
+        const ChatHistory& history,
+        const ov::AnyMap& config_map
+    );
+    template <typename... Properties>
+    util::EnableIfAllStringAny<VLMDecodedResults, Properties...> generate(
+        const ChatHistory& history,
+        Properties&&... properties
+    ) {
+        return generate(
+            history, AnyMap{std::forward<Properties>(properties)...}
+        );
+    }
+    std::vector<EncodedGenerationResult> generate(const std::vector<ov::Tensor>& input_ids, const std::vector<ov::genai::GenerationConfig>& sampling_params, const ov::genai::StreamerVariant& streamer=std::monostate{});
+    std::vector<GenerationResult> generate(const std::vector<std::string>& prompts, const std::vector<ov::genai::GenerationConfig>& sampling_params, const ov::genai::StreamerVariant& streamer=std::monostate{});
+
+    std::vector<GenerationResult> generate(
+        const std::vector<ChatHistory>& histories,
+        const std::vector<ov::genai::GenerationConfig>& sampling_params,
+        const ov::genai::StreamerVariant& streamer=std::monostate{});
+
+    std::vector<VLMDecodedResults> generate(
+             const std::vector<std::string>& prompts,
+             const std::vector<std::vector<ov::Tensor>>& images,
+             const std::vector<GenerationConfig>& sampling_params,
+             const StreamerVariant& streamer=std::monostate{});
+
+    std::vector<VLMDecodedResults> generate(
+        const std::vector<std::string>& prompts,
+        const std::vector<std::vector<ov::Tensor>>& images,
+        const std::vector<std::vector<ov::Tensor>>& videos,
+        const std::vector<GenerationConfig>& sampling_params,
+        const StreamerVariant& streamer=std::monostate{});
+
+    std::vector<VLMDecodedResults> generate(
+        const std::vector<ChatHistory>& histories,
+        const std::vector<std::vector<ov::Tensor>>& images,
+        const std::vector<GenerationConfig>& sampling_params,
+        const StreamerVariant& streamer=std::monostate{});
+
+    std::vector<VLMDecodedResults> generate(
+        const std::vector<ChatHistory>& histories,
+        const std::vector<std::vector<ov::Tensor>>& images,
+        const std::vector<std::vector<ov::Tensor>>& videos,
+        const std::vector<GenerationConfig>& sampling_params,
+        const StreamerVariant& streamer=std::monostate{});
+        EncodedResults generate(
+        const EncodedInputs& inputs,
+        OptionalGenerationConfig generation_config = std::nullopt,
+        StreamerVariant streamer=std::monostate()
+    );
+
+    /**
+    * @brief Low level generate to be called with already encoded input_ids tokens.
+    * Streamer cannot be used for multibatch inputs.
+    *
+    * @param input_ids or pair of (input_ids, attentino_mask) encoded input prompt tokens
+    * @param generation config params
+    * @return EncodedResults a structure with resulting tokens and scores
+    * @throws Exception if the stremaer is set for inputs_ids with multiple batches
+    */
+    template <typename... Properties>
+    util::EnableIfAllStringAny<EncodedResults, Properties...> generate(
+            const EncodedInputs& inputs,
+            Properties&&... properties) {
+        return generate(inputs, AnyMap{std::forward<Properties>(properties)...});
+    }
+    EncodedResults generate(const EncodedInputs& inputs, const ov::AnyMap& config_map);
+
+    void set_chat_template(const std::string& new_template);
+    ov::genai::Tokenizer get_tokenizer() const;
+    // set_tokenizer?
+
     VideoGenerationResult decode(const ov::Tensor& latent) {}
     void export_model(const std::filesystem::path& blobs_dir) {}
 
