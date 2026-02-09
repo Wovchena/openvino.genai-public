@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * @file py_omni_pipeline.cpp
- * @brief Python bindings for OmniPipeline
+ * @file py_bindings_example.cpp
+ * @brief Python bindings example for OmniPipeline
  * 
  * This file shows the proposed structure for Python bindings of the Omni API.
  * Implementation would follow patterns from existing pipeline bindings.

@@ -208,7 +208,7 @@ void demonstrate_multimodal_chat(ov::genai::OmniPipeline& pipe) {
 }
 
 int main(int argc, char* argv[]) try {
-    if (argc < 2 || argc > 4) {
+    if (argc < 2 || argc > 5) {
         std::cout << "Usage: " << argv[0] << " <MODEL_DIR> [IMAGE_FILE] [AUDIO_FILE] [DEVICE]\n";
         std::cout << "\nExamples:\n";
         std::cout << "  " << argv[0] << " ./gpt4o-model\n";
