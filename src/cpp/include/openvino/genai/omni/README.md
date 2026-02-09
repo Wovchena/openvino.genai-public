@@ -13,7 +13,7 @@ The Omni API provides a unified interface for models that support:
 
 ## Architecture
 
-The API consists of three main components plus continuous batching support:
+The API consists of four main components:
 
 ### 1. OmniPipeline
 The main pipeline class for loading and running omni-modal models.
@@ -155,7 +155,6 @@ std::cout << "Audio length: " << result.audio->size() / result.audio_sample_rate
 ov::genai::SchedulerConfig scheduler_config;
 scheduler_config.max_num_batched_tokens = 512;
 scheduler_config.cache_size = 8;  // GB
-scheduler_config.block_size = 32;
 scheduler_config.dynamic_split_fuse = true;
 
 ov::AnyMap properties;

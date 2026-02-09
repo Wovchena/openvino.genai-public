@@ -502,10 +502,10 @@ protected:
         float m_load_time = 0.0f;
     };
 
-    // Regular implementation (to be defined in implementation file)
+    // Regular implementation extending OmniPipelineBase (to be defined in implementation file)
     class OmniPipelineImpl;
     
-    // Continuous batching adapter (forward declaration)
+    // Continuous batching adapter extending OmniPipelineBase (forward declaration)
     class OmniContinuousBatchingAdapter;
 
 private:

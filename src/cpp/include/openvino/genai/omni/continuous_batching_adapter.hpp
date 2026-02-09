@@ -23,7 +23,7 @@ namespace ov::genai {
  * - Dynamic batching with request queueing
  * - Better resource utilization
  */
-class OmniContinuousBatchingAdapter : public OmniPipeline::OmniPipelineImpl {
+class OmniContinuousBatchingAdapter : public OmniPipeline::OmniPipelineBase {
 public:
     /**
      * @brief Construct adapter from models directory.
