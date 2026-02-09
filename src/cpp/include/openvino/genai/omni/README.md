@@ -11,6 +11,8 @@ The Omni API provides a unified interface for models that support:
 - **Streaming**: Real-time text and audio streaming
 - **Dual execution modes**: Regular and ContinuousBatching for different workloads
 
+> **Note**: ContinuousBatching is implemented as a separate adapter class following the established pattern in VLMPipeline and LLMPipeline. See [DESIGN_DECISION_CONTINUOUS_BATCHING.md](DESIGN_DECISION_CONTINUOUS_BATCHING.md) for the detailed design rationale.
+
 ## Architecture
 
 The API consists of four main components:

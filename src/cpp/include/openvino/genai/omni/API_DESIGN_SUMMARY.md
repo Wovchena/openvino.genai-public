@@ -4,6 +4,12 @@
 
 This document summarizes the proposed API design for Omni-modal models in OpenVINO GenAI. Omni models (like GPT-4o, Qwen2-Audio) can process and generate multiple modalities including text, images, audio, and video.
 
+The API supports two execution modes:
+- **Regular mode**: Optimized for single-request, lowest latency scenarios
+- **ContinuousBatching mode**: Optimized for high-throughput, multiple concurrent requests
+
+> **Design Decision**: The separate adapter pattern is used for ContinuousBatching integration, following the established patterns in VLMPipeline and LLMPipeline. See [DESIGN_DECISION_CONTINUOUS_BATCHING.md](DESIGN_DECISION_CONTINUOUS_BATCHING.md) for detailed rationale.
+
 ## Design Goals
 
 1. **Consistency**: Follow existing OpenVINO GenAI API patterns (VLMPipeline, LLMPipeline, WhisperPipeline)
@@ -11,6 +17,7 @@ This document summarizes the proposed API design for Omni-modal models in OpenVI
 3. **Ease of Use**: Intuitive API for common use cases
 4. **Performance**: Built-in metrics for optimization
 5. **Extensibility**: Easy to add new modalities or capabilities
+6. **Maintainability**: Clear separation of concerns between execution modes
 
 ## API Components
 
@@ -309,13 +316,14 @@ The API is designed for future extensions:
 
 ```
 src/cpp/include/openvino/genai/omni/
-├── pipeline.hpp                      # Main OmniPipeline API with dual-mode support
-├── omni_generation_config.hpp       # Configuration
-├── perf_metrics.hpp                  # Performance metrics
-├── continuous_batching_adapter.hpp  # ContinuousBatching adapter implementation
-├── py_bindings_example.cpp          # Python bindings structure
-├── README.md                         # Comprehensive documentation
-└── API_DESIGN_SUMMARY.md            # Complete design rationale
+├── pipeline.hpp                              # Main OmniPipeline API with dual-mode support
+├── omni_generation_config.hpp               # Configuration
+├── perf_metrics.hpp                          # Performance metrics
+├── continuous_batching_adapter.hpp          # ContinuousBatching adapter implementation
+├── py_bindings_example.cpp                  # Python bindings structure
+├── README.md                                 # Comprehensive documentation
+├── API_DESIGN_SUMMARY.md                    # Complete design rationale
+└── DESIGN_DECISION_CONTINUOUS_BATCHING.md  # Detailed CB integration design decision
 
 samples/cpp/omni_chat/
 ├── omni_chat.cpp                    # C++ sample
