@@ -126,7 +126,7 @@ auto result = pipe.generate("Hello, how are you?", config);
 if (result.audio.has_value()) {
     ov::Tensor audio_output = result.audio.value();
     auto shape = audio_output.get_shape();  // e.g., [24000] for 1 sec at 24kHz
-    float* samples = audio_output.data<float>();
+    float* audio_data = audio_output.data<float>();  // Raw pointer to audio samples
     // Save or play audio samples
 }
 ```
@@ -216,7 +216,9 @@ result = pipe.generate("Describe this image", image=image)
 print(result.texts[0])
 
 # Audio transcription
-audio_samples = np.array(..., dtype=np.float32)  # Float audio samples, shape: (num_samples,)
+# Mono audio: shape (num_samples,) e.g., (16000,) for 1 sec at 16kHz
+# Stereo audio: shape (2, num_samples) - channels first
+audio_samples = np.array(..., dtype=np.float32)  # Float audio samples
 result = pipe.generate("Transcribe", audio=audio_samples)
 print(result.texts[0])
 
@@ -226,8 +228,9 @@ config.output_modality = "audio"
 config.voice = "alloy"
 result = pipe.generate("Hello!", config)
 if result.audio is not None:
-    # result.audio is a numpy array of float samples, shape: (num_samples,)
-    duration = len(result.audio) / result.audio_sample_rate
+    # result.audio is a numpy array of float samples
+    # Shape: (num_samples,) for mono or (channels, num_samples) for multi-channel
+    duration = len(result.audio) / result.audio_sample_rate if result.audio.ndim == 1 else result.audio.shape[1] / result.audio_sample_rate
     print(f"Generated {duration:.2f} seconds of audio")
 
 # Chat mode

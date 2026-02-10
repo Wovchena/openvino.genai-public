@@ -282,10 +282,15 @@ result = pipe.generate("Hello", config)
 ### Modality Handling
 
 **Consistent Tensor Usage:**
-1. **Images**: `ov::Tensor` with shape `[batch, height, width, channels]`
-2. **Videos**: `ov::Tensor` with shape `[batch, frames, height, width, channels]`
-3. **Audio**: `ov::Tensor` with shape `[num_samples]` or `[channels, num_samples]`
+1. **Images**: `ov::Tensor` with shape `[height, width, channels]` (single image) or `[batch, height, width, channels]` (batch)
+2. **Videos**: `ov::Tensor` with shape `[frames, height, width, channels]` (single video) or `[batch, frames, height, width, channels]` (batch)
+3. **Audio**: `ov::Tensor` with shape `[num_samples]` (mono) or `[channels, num_samples]` (multi-channel)
 4. **Text**: `std::string` (tokenization handled internally)
+
+**Note on Batch Dimensions:**
+- Images and videos: Batch dimension is explicit when processing multiple items
+- Audio: Processed one at a time; batch processing handled at request level, not tensor level
+- For batch audio in ContinuousBatching, use multiple requests with individual audio tensors
 
 **Rationale for ov::Tensor for Audio:**
 - **API Consistency**: All visual/audio modalities use same type system
