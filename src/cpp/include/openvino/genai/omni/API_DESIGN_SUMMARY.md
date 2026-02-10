@@ -115,12 +115,14 @@ Adapter class that enables ContinuousBatching mode for OmniPipeline.
 - Wraps ContinuousBatchingPipeline to provide high-throughput batch processing
 - Automatically selected based on configuration and device capabilities
 - Implements same interface as regular OmniPipelineImpl
+- **Uses native audio API** from ContinuousBatchingPipeline (no conversion needed)
 
 **Benefits:**
 - **Higher throughput**: Process multiple requests concurrently
 - **Efficient KV-cache**: Paged attention with dynamic memory management
 - **Request queueing**: Automatic batching and scheduling
 - **Better utilization**: Maximize GPU/CPU resource usage
+- **Native audio support**: Leverages extended ContinuousBatchingPipeline API
 
 **Usage:**
 ```cpp
@@ -135,6 +137,33 @@ properties.insert(ov::genai::scheduler_config(scheduler_config));
 ov::genai::OmniPipeline pipe("model", "GPU", properties);
 // Now using OmniContinuousBatchingAdapter internally
 ```
+
+### 6. ContinuousBatchingPipeline Native Audio Extensions
+
+**New in continuous_batching_pipeline.hpp:**
+
+The base ContinuousBatchingPipeline API has been extended to natively support audio:
+
+**Type Definitions:**
+```cpp
+using RawAudioInput = std::vector<float>;
+
+class OmniDecodedResults : public VLMDecodedResults {
+    std::optional<std::vector<float>> audio;
+    size_t audio_sample_rate;
+    size_t audio_channels;
+};
+```
+
+**New Methods (9 overloads):**
+- 3 audio-aware `add_request()` methods
+- 6 audio-aware `generate()` methods returning `OmniDecodedResults`
+
+**Benefits:**
+- ✅ **Native support**: Audio is first-class citizen, not adapter workaround
+- ✅ **Performance**: No conversion overhead
+- ✅ **Consistency**: All modalities (text, images, videos, audio) handled uniformly
+- ✅ **Reusability**: Other pipelines can leverage audio support
 
 ## Use Cases
 

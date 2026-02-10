@@ -56,6 +56,13 @@ if (result.audio.has_value()) {
 ### 4. ContinuousBatching Support
 For high-throughput scenarios, the pipeline can operate in ContinuousBatching mode.
 
+**Native Audio Support in ContinuousBatchingPipeline:**
+The base `ContinuousBatchingPipeline` API has been extended to natively support audio inputs and outputs, providing:
+- Audio-aware `add_request()` and `generate()` methods
+- `OmniDecodedResults` structure with audio output
+- Consistent API across all modalities (text, images, videos, audio)
+- No conversion overhead for audio processing
+
 **Automatic Selection:**
 The pipeline automatically uses ContinuousBatching when:
 - SchedulerConfig is explicitly provided in properties

@@ -1,8 +1,25 @@
 # Design Decision: ContinuousBatching Integration for OmniPipeline
 
 **Decision Date**: 2026-02-09  
-**Status**: Approved  
-**Decision**: Use separate adapter pattern (OmniContinuousBatchingAdapter) rather than integrating ContinuousBatching directly into OmniPipeline
+**Updated**: 2026-02-10  
+**Status**: Implemented (with Native API Extension)  
+**Decision**: 
+1. Use separate adapter pattern (OmniContinuousBatchingAdapter) for OmniPipeline architecture
+2. **Extend ContinuousBatchingPipeline API** to natively support audio (not just adapter workaround)
+
+## Update (2026-02-10): Native API Extension
+
+Following the initial adapter-based design, we've now **extended the ContinuousBatchingPipeline API itself** to natively support audio inputs and outputs. This provides:
+
+- **Native audio support** in the base ContinuousBatchingPipeline class
+- `RawAudioInput` type definition at the API level
+- `OmniDecodedResults` structure with audio output fields
+- Audio-aware `add_request()` and `generate()` methods (9 new overloads)
+- Consistent API across all modalities (text, images, videos, audio)
+
+This approach combines the benefits of:
+- **Adapter pattern** for OmniPipeline (maintains separation of concerns)
+- **Native API extension** for ContinuousBatchingPipeline (eliminates conversion overhead)
 
 ## Problem Statement
 
@@ -254,4 +271,87 @@ OmniPipeline::OmniPipeline(const std::filesystem::path& models_path,
 This design decision has been documented and implemented in the Omni API proposal.
 
 **Approver**: OpenVINO GenAI Team  
-**Implementation**: API design phase complete, ready for implementation
+**Implementation**: API design phase complete, native API extensions added
+
+## Addendum: Native API Extension (2026-02-10)
+
+### Extended ContinuousBatchingPipeline
+
+Following the adapter-based architecture decision, we've extended the **ContinuousBatchingPipeline API itself** to natively support audio:
+
+#### API Additions
+
+**1. Type Definitions**
+```cpp
+using RawAudioInput = std::vector<float>;  // In continuous_batching_pipeline.hpp
+
+class OmniDecodedResults : public VLMDecodedResults {
+public:
+    std::optional<std::vector<float>> audio;
+    size_t audio_sample_rate = 0;
+    size_t audio_channels = 1;
+};
+```
+
+**2. Audio-Aware Methods** (9 new overloads)
+
+`add_request()` with audio:
+- `add_request(id, prompt, audio, config)`
+- `add_request(id, prompt, images, audio, config)`
+- `add_request(id, prompt, images, videos, audio, config)`
+
+`generate()` returning `OmniDecodedResults`:
+- `generate(prompts, audio, params, streamer)`
+- `generate(prompts, images, audio, params, streamer)`
+- `generate(prompts, images, videos, audio, params, streamer)`
+- `generate(histories, audio, params, streamer)`
+- `generate(histories, images, audio, params, streamer)`
+- `generate(histories, images, videos, audio, params, streamer)`
+
+### Rationale for Native Extension
+
+While maintaining the adapter pattern for OmniPipeline's architecture:
+
+**Pros of Native API Extension:**
+- ✓ **Eliminates conversion overhead** in OmniContinuousBatchingAdapter
+- ✓ **Consistent API** across all modalities (text, images, videos, audio)
+- ✓ **Reusable** by other future pipelines needing audio support
+- ✓ **Better performance** - no intermediate wrapper layer for audio
+- ✓ **Cleaner code** - adapter delegates to native methods instead of workarounds
+
+**Why This Doesn't Contradict the Adapter Decision:**
+- Adapter pattern still used for **OmniPipeline** (maintains separation)
+- Native extension for **ContinuousBatchingPipeline** (supports all modalities uniformly)
+- Similar to how VLM support was added natively to ContinuousBatchingPipeline
+- Audio is treated as a first-class modality, not a special case
+
+### Architecture After Native Extension
+
+```
+OmniPipeline (public API)
+  └── OmniPipelineBase (interface)
+       ├── OmniPipelineImpl (regular mode)
+       └── OmniContinuousBatchingAdapter (batch mode)
+            └── wraps ContinuousBatchingPipeline (with native audio support)
+```
+
+**ContinuousBatchingPipeline now supports:**
+- Text (native)
+- Images/Videos (native, added for VLM)
+- **Audio (native, added for Omni)** ← New
+- All combinations of above modalities
+
+### Benefits of Hybrid Approach
+
+| Aspect | Adapter Pattern | Native API Extension |
+|--------|----------------|---------------------|
+| **OmniPipeline Design** | ✅ Keeps separate adapters | ✅ Maintains separation |
+| **CB API** | Not needed for adapter | ✅ Native audio support |
+| **Performance** | Some overhead | ✅ No conversion needed |
+| **Reusability** | Limited to Omni | ✅ Available to all |
+| **Consistency** | Special case | ✅ Uniform API |
+
+This hybrid approach provides the best of both worlds:
+- **Architectural consistency** through adapter pattern
+- **Performance and reusability** through native API extension
+
