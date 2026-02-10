@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 #include <optional>
+#include <vector>
 
 #include <openvino/runtime/tensor.hpp>
 
@@ -22,6 +23,12 @@
 #include "openvino/genai/cache_eviction.hpp"
 
 namespace ov::genai {
+
+/**
+ * @brief Audio data representation for continuous batching.
+ * Audio is represented as raw float samples (mono or interleaved stereo).
+ */
+using RawAudioInput = std::vector<float>;
 
 /**
  * @brief Contains general pipeline metrics, either aggregated throughout the lifetime of the generation pipeline
@@ -57,6 +64,31 @@ struct PipelineMetrics {
      * Duration of the last generation step in microseconds.
      */
     float inference_duration = 0.0;
+};
+
+/**
+ * @brief Results structure for omni-modal generation with audio support.
+ * Extends VLMDecodedResults to include audio output.
+ */
+class OPENVINO_GENAI_EXPORTS OmniDecodedResults : public VLMDecodedResults {
+public:
+    /**
+     * @brief Generated audio output as raw float samples.
+     * Contains audio data when the model generates audio output.
+     * Format: vector of float samples, mono or interleaved stereo.
+     */
+    std::optional<std::vector<float>> audio;
+
+    /**
+     * @brief Audio sample rate in Hz.
+     * Valid when audio output is present.
+     */
+    size_t audio_sample_rate = 0;
+
+    /**
+     * @brief Number of audio channels (1 for mono, 2 for stereo).
+     */
+    size_t audio_channels = 1;
 };
 
 class OPENVINO_GENAI_EXPORTS ContinuousBatchingPipeline {
@@ -172,6 +204,11 @@ public:
     GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const ov::genai::GenerationConfig& sampling_params);
     GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const std::vector<ov::Tensor>& images, const std::vector<ov::Tensor>& videos, const ov::genai::GenerationConfig& sampling_params);
     GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const std::vector<ov::Tensor>& images, const ov::genai::GenerationConfig& sampling_params);
+    
+    /// Audio-aware add_request overloads for omni-modal models
+    GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const RawAudioInput& audio, const ov::genai::GenerationConfig& sampling_params);
+    GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const std::vector<ov::Tensor>& images, const RawAudioInput& audio, const ov::genai::GenerationConfig& sampling_params);
+    GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const std::vector<ov::Tensor>& images, const std::vector<ov::Tensor>& videos, const RawAudioInput& audio, const ov::genai::GenerationConfig& sampling_params);
 
     void step();
 
@@ -209,6 +246,49 @@ public:
         const std::vector<ChatHistory>& histories,
         const std::vector<std::vector<ov::Tensor>>& images,
         const std::vector<std::vector<ov::Tensor>>& videos,
+        const std::vector<GenerationConfig>& sampling_params,
+        const StreamerVariant& streamer=std::monostate{});
+
+    /// Audio-aware generate methods for omni-modal models
+    std::vector<OmniDecodedResults> generate(
+        const std::vector<std::string>& prompts,
+        const std::vector<RawAudioInput>& audio,
+        const std::vector<GenerationConfig>& sampling_params,
+        const StreamerVariant& streamer=std::monostate{});
+
+    std::vector<OmniDecodedResults> generate(
+        const std::vector<std::string>& prompts,
+        const std::vector<std::vector<ov::Tensor>>& images,
+        const std::vector<RawAudioInput>& audio,
+        const std::vector<GenerationConfig>& sampling_params,
+        const StreamerVariant& streamer=std::monostate{});
+
+    std::vector<OmniDecodedResults> generate(
+        const std::vector<std::string>& prompts,
+        const std::vector<std::vector<ov::Tensor>>& images,
+        const std::vector<std::vector<ov::Tensor>>& videos,
+        const std::vector<RawAudioInput>& audio,
+        const std::vector<GenerationConfig>& sampling_params,
+        const StreamerVariant& streamer=std::monostate{});
+
+    std::vector<OmniDecodedResults> generate(
+        const std::vector<ChatHistory>& histories,
+        const std::vector<RawAudioInput>& audio,
+        const std::vector<GenerationConfig>& sampling_params,
+        const StreamerVariant& streamer=std::monostate{});
+
+    std::vector<OmniDecodedResults> generate(
+        const std::vector<ChatHistory>& histories,
+        const std::vector<std::vector<ov::Tensor>>& images,
+        const std::vector<RawAudioInput>& audio,
+        const std::vector<GenerationConfig>& sampling_params,
+        const StreamerVariant& streamer=std::monostate{});
+
+    std::vector<OmniDecodedResults> generate(
+        const std::vector<ChatHistory>& histories,
+        const std::vector<std::vector<ov::Tensor>>& images,
+        const std::vector<std::vector<ov::Tensor>>& videos,
+        const std::vector<RawAudioInput>& audio,
         const std::vector<GenerationConfig>& sampling_params,
         const StreamerVariant& streamer=std::monostate{});
 
