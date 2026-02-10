@@ -16,7 +16,7 @@ namespace ov::genai {
 // Return dict[str->[tensor, float, str]] (transformers) vs inheritance (my idea) vs optional members (llama.cpp) in return type
 // streaming https://github.com/OpenBMB/MiniCPM-V
 // try AnytoAnyPipeline with omni mdels
-// find the model that generates text and images
+// Models that generate text and images: Janus
 // ask LLMs about multimodal and omni
 // https://github.com/GeeeekExplorer/nano-vllm - no omni support
 // https://docs.ollama.com/capabilities/vision - no omni
