@@ -26,9 +26,20 @@ namespace ov::genai {
 
 /**
  * @brief Audio data representation for continuous batching.
- * Audio is represented as raw float samples (mono or interleaved stereo).
+ * Audio is represented as ov::Tensor for consistency with images/videos.
+ * 
+ * Shape: [num_samples] for mono audio, or [channels, num_samples] for multi-channel
+ * Element type: f32 (normalized float samples in range [-1.0, 1.0])
+ * 
+ * Example:
+ * @code
+ * // Create mono audio tensor (16000 samples at 16kHz = 1 second)
+ * ov::Tensor audio({16000}, ov::element::f32);
+ * float* data = audio.data<float>();
+ * // Fill with audio samples...
+ * @endcode
  */
-using RawAudioInput = std::vector<float>;
+using RawAudioInput = ov::Tensor;
 
 /**
  * @brief Contains general pipeline metrics, either aggregated throughout the lifetime of the generation pipeline
@@ -73,11 +84,15 @@ struct PipelineMetrics {
 class OPENVINO_GENAI_EXPORTS OmniDecodedResults : public VLMDecodedResults {
 public:
     /**
-     * @brief Generated audio output as raw float samples.
+     * @brief Generated audio output as ov::Tensor.
      * Contains audio data when the model generates audio output.
-     * Format: vector of float samples, mono or interleaved stereo.
+     * 
+     * Shape: [num_samples] for mono, or [channels, num_samples] for multi-channel
+     * Element type: f32 (normalized float samples in range [-1.0, 1.0])
+     * 
+     * Use audio_sample_rate to interpret the temporal dimension.
      */
-    std::optional<std::vector<float>> audio;
+    std::optional<ov::Tensor> audio;
 
     /**
      * @brief Audio sample rate in Hz.
@@ -87,6 +102,7 @@ public:
 
     /**
      * @brief Number of audio channels (1 for mono, 2 for stereo).
+     * Derived from audio tensor shape when present.
      */
     size_t audio_channels = 1;
 };

@@ -18,9 +18,12 @@ namespace ov::genai {
 
 /**
  * @brief Audio data representation.
- * Audio is represented as raw float samples.
+ * Audio is represented as ov::Tensor for consistency with images/videos.
+ * 
+ * Shape: [num_samples] for mono audio, or [channels, num_samples] for multi-channel
+ * Element type: f32 (normalized float samples in range [-1.0, 1.0])
  */
-using RawAudioInput = std::vector<float>;
+using RawAudioInput = ov::Tensor;
 
 /**
  * @brief Results structure for omni-modal generation.
@@ -29,11 +32,15 @@ using RawAudioInput = std::vector<float>;
 class OPENVINO_GENAI_EXPORTS OmniDecodedResults : public DecodedResults {
 public:
     /**
-     * @brief Generated audio output as raw float samples.
+     * @brief Generated audio output as ov::Tensor.
      * Contains audio data when output_modality includes "audio".
-     * Format: vector of float samples, mono or interleaved stereo.
+     * 
+     * Shape: [num_samples] for mono, or [channels, num_samples] for multi-channel
+     * Element type: f32 (normalized float samples in range [-1.0, 1.0])
+     * 
+     * Use audio_sample_rate to interpret the temporal dimension.
      */
-    std::optional<std::vector<float>> audio;
+    std::optional<ov::Tensor> audio;
 
     /**
      * @brief Audio sample rate in Hz.
@@ -43,6 +50,7 @@ public:
 
     /**
      * @brief Number of audio channels (1 for mono, 2 for stereo).
+     * Derived from audio tensor shape when present.
      */
     size_t audio_channels = 1;
 
@@ -514,10 +522,10 @@ private:
 
 /**
  * Utils that allow to use generate() in the following way:
- * pipe.generate(prompt, ov::genai::audio(audio_samples));
+ * pipe.generate(prompt, ov::genai::audio(audio_tensor));
  * pipe.generate(prompt, ov::genai::output_modality("audio"));
  */
-static constexpr ov::Property<RawAudioInput> audio{"audio"};
+static constexpr ov::Property<ov::Tensor> audio{"audio"};
 static constexpr ov::Property<std::string> output_modality{"output_modality"};
 static constexpr ov::Property<std::string> voice{"voice"};
 static constexpr ov::Property<size_t> audio_sample_rate{"audio_sample_rate"};
