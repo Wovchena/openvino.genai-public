@@ -106,7 +106,12 @@ std::cout << result.texts[0] << std::endl;
 
 ### Audio Transcription
 ```cpp
-std::vector<float> audio_samples = /* load audio at 16000 Hz */;
+// Create audio tensor (1 second at 16kHz, mono)
+ov::Tensor audio_samples({16000}, ov::element::f32);
+float* data = audio_samples.data<float>();
+// Fill with audio samples in range [-1.0, 1.0]
+// ... load audio data ...
+
 auto result = pipe.generate("Transcribe this audio", audio_samples);
 std::cout << result.texts[0] << std::endl;
 ```
@@ -119,7 +124,9 @@ config.voice = "alloy";
 
 auto result = pipe.generate("Hello, how are you?", config);
 if (result.audio.has_value()) {
-    auto& samples = result.audio.value();
+    ov::Tensor audio_output = result.audio.value();
+    auto shape = audio_output.get_shape();  // e.g., [24000] for 1 sec at 24kHz
+    float* samples = audio_output.data<float>();
     // Save or play audio samples
 }
 ```
@@ -138,7 +145,8 @@ auto result2 = pipe.generate("Can you describe it in more detail?");
 std::cout << result2.texts[0] << std::endl;
 
 // Turn 3: Audio + Text
-std::vector<float> audio = /* load audio */;
+ov::Tensor audio({16000}, ov::element::f32);
+// ... load audio ...
 auto result3 = pipe.generate("What did they say?", audio);
 std::cout << result3.texts[0] << std::endl;
 
@@ -153,7 +161,11 @@ config.voice = "nova";
 
 auto result = pipe.generate("Tell me a joke", config);
 std::cout << "Text: " << result.texts[0] << std::endl;
-std::cout << "Audio length: " << result.audio->size() / result.audio_sample_rate << "s" << std::endl;
+if (result.audio.has_value()) {
+    size_t num_samples = result.audio->get_shape()[0];
+    float duration = static_cast<float>(num_samples) / result.audio_sample_rate;
+    std::cout << "Audio duration: " << duration << " seconds" << std::endl;
+}
 ```
 
 ### Batch Processing with ContinuousBatching
@@ -204,7 +216,7 @@ result = pipe.generate("Describe this image", image=image)
 print(result.texts[0])
 
 # Audio transcription
-audio_samples = np.array(...)  # Float audio samples
+audio_samples = np.array(..., dtype=np.float32)  # Float audio samples, shape: (num_samples,)
 result = pipe.generate("Transcribe", audio=audio_samples)
 print(result.texts[0])
 
@@ -214,8 +226,9 @@ config.output_modality = "audio"
 config.voice = "alloy"
 result = pipe.generate("Hello!", config)
 if result.audio is not None:
-    # result.audio is a numpy array of float samples
-    print(f"Generated {len(result.audio)} audio samples")
+    # result.audio is a numpy array of float samples, shape: (num_samples,)
+    duration = len(result.audio) / result.audio_sample_rate
+    print(f"Generated {duration:.2f} seconds of audio")
 
 # Chat mode
 pipe.start_chat()

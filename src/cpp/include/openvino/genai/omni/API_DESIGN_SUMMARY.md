@@ -182,7 +182,10 @@ auto result = pipe.generate("Describe this image", image);
 
 ### 3. Audio Transcription
 ```cpp
-std::vector<float> audio = load_audio("speech.wav");
+// Create audio tensor (1 second at 16kHz, mono)
+ov::Tensor audio({16000}, ov::element::f32);
+float* data = audio.data<float>();
+// Fill with normalized audio samples in [-1.0, 1.0]
 auto result = pipe.generate("Transcribe", audio);
 ```
 
@@ -192,7 +195,7 @@ ov::genai::OmniGenerationConfig config;
 config.output_modality = "audio";
 config.voice = "alloy";
 auto result = pipe.generate("Hello world", config);
-// Use result.audio.value()
+// result.audio.value() is ov::Tensor with shape [num_samples]
 ```
 
 ### 5. Multimodal Conversation
@@ -200,6 +203,9 @@ auto result = pipe.generate("Hello world", config);
 pipe.start_chat();
 auto r1 = pipe.generate("What's this?", image);
 auto r2 = pipe.generate("Tell me more");
+// Create audio tensor for input
+ov::Tensor audio({16000}, ov::element::f32);
+// ... fill audio ...
 auto r3 = pipe.generate("Explain", audio);
 pipe.finish_chat();
 ```
@@ -271,13 +277,29 @@ result = pipe.generate("Hello", config)
 3. **Configuration**: Extends GenerationConfig
 4. **Metrics**: Extends PerfMetrics
 5. **Property-based API**: Uses ov::Property for flexible configuration
+6. **Tensor-based Modalities**: All modalities (images, videos, audio) use ov::Tensor
 
 ### Modality Handling
 
-1. **Audio**: `std::vector<float>` for samples (consistent with Whisper)
-2. **Images**: `ov::Tensor` (consistent with VLMPipeline)
-3. **Videos**: `std::vector<ov::Tensor>` (consistent with VLMPipeline)
-4. **Text**: `std::string` (consistent with LLMPipeline)
+**Consistent Tensor Usage:**
+1. **Images**: `ov::Tensor` with shape `[batch, height, width, channels]`
+2. **Videos**: `ov::Tensor` with shape `[batch, frames, height, width, channels]`
+3. **Audio**: `ov::Tensor` with shape `[num_samples]` or `[channels, num_samples]`
+4. **Text**: `std::string` (tokenization handled internally)
+
+**Rationale for ov::Tensor for Audio:**
+- **API Consistency**: All visual/audio modalities use same type system
+- **Shape Metadata**: Audio tensor shape is self-documenting
+- **Type Safety**: Element type validation (f32 for normalized samples)
+- **Memory Management**: Unified allocation and GPU readiness
+- **Future-proof**: Enables batch audio, spatial audio, multi-channel processing
+- **OpenVINO Native**: Seamless integration with model I/O tensors
+
+**Audio Tensor Convention:**
+- **Element type**: `ov::element::f32` (normalized float samples in `[-1.0, 1.0]`)
+- **Mono audio**: Shape `[num_samples]` - 1D tensor
+- **Stereo audio**: Shape `[2, num_samples]` - 2D tensor, channels first
+- **Multi-channel**: Shape `[channels, num_samples]` - 2D tensor, channels first
 
 ### Output Flexibility
 
