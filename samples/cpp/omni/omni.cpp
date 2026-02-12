@@ -24,6 +24,7 @@ namespace ov::genai {
 // What model output to append to history
 // Tokenizer + embedding layer is just one modality example
 // What is the model state in terms of modalities
+// Dariusz: I would like to make sure that concurrency is planned from the start. Otherwise we would need to refactor it again...
 class AnyToAnyPipeline {
 public:
     explicit AnyToAnyPipeline(const std::filesystem::path& models_dir) {}
