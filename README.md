@@ -1,7 +1,5 @@
 <div align="center">
 
-Hi
-
 ![OpenVINO GenAI](/site/static/img/openvino-genai-logo-gradient.svg)
 
 [<b>Getting Started</b>](#getting-started) •
