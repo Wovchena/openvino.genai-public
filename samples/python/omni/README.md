@@ -6,6 +6,7 @@ This example demonstrates interactive multimodal chat with Qwen3-Omni models: te
 
 The following are sample files:
  - [`qwen3_omni_chat.py`](./qwen3_omni_chat.py) demonstrates multimodal chat with optional speech synthesis.
+ - [`qwen3_omni_gradio_chat.py`](./qwen3_omni_gradio_chat.py) serves a voice chat web UI with streamed speech playback.
 
 ## Download and convert the model and tokenizers
 
@@ -86,6 +87,30 @@ talker_speech_config.speaker = "Cherry"   # Select voice (optional)
 ```
 
 Available voices vary by checkpoint. MoE models typically expose `"Ethan"`, `"Chelsie"`, `"Aiden"`, `"Cherry"`. Check `talker_config.speaker_id` in the model's `config.json` for the full list. Leaving `speaker` empty selects the default voice. Set `talker_speech_config.return_audio = False` for text-only responses.
+
+### Streaming speech
+
+By default the talker starts once the thinker has produced the whole answer. Set `text_config.stream_text2speech = True` to feed thinker tokens to the talker as they are produced, so the first audio chunk arrives while text is still being decoded. Receive the chunks through `speech_streamer`, a callable or an `openvino_genai.OmniSpeechStreamerBase` subclass whose `write()` gets a float32 `[1, 1, N]` tensor at 24kHz. The tensor is valid only during the call, so copy it. `stream_text2speech` requires `return_audio = True`.
+
+## Voice chat in a browser
+
+[`qwen3_omni_gradio_chat.py`](./qwen3_omni_gradio_chat.py) wraps the pipeline in a [Gradio](https://www.gradio.app/) web UI, which is the practical way to try voice input and streamed speech output on a remote machine: the browser records the microphone and plays the answer back as it is generated.
+
+```sh
+python qwen3_omni_gradio_chat.py <MODEL_DIR>
+```
+
+The server listens on port 7860 on all interfaces. Browsers allow microphone capture only on `https://` pages or on `localhost`, so to talk to a remote server forward the port and open <http://localhost:7860>:
+
+```sh
+ssh -L 7860:localhost:7860 <remote-host>
+```
+
+Sharing a plain `http://<remote-host>:7860` link works for typed questions and uploaded WAV files but not for the microphone. Put the server behind TLS (or pass `ssl_certfile`/`ssl_keyfile` to `demo.launch()`) to enable the microphone for a shared link.
+
+Each turn runs the pipeline on a worker thread; text tokens update the conversation as they arrive and speech chunks are forwarded to a streaming `gr.Audio` output, buffered to about a second each for smooth playback. The browser starts playing as soon as the first chunk arrives, so gap-free playback requires the talker to produce audio faster than real time. The sample sets `talker_speech_config.audio_chunk_frames = 8` (default 4): the per-frame talker and code-predictor cost is fixed while code2wav and its warm-up trim are paid once per chunk, so larger chunks raise speech throughput by a few percent at the cost of first-chunk latency. The pipeline handles one turn at a time, so concurrent visitors queue behind each other.
+
+The sample composes `OmniPipeline` from a `VLMPipeline` (thinker) and a `Talker`, both on GPU. The thinker produces text much faster than speech consumes it, so on a shared GPU it gets `MODEL_PRIORITY=LOW` and the talker `MODEL_PRIORITY=HIGH`; without the hint the GPU runs the thinker to completion first and speech starts only after the text is done. Whether playback then stays gap-free depends on the GPU having headroom for both stages at once. Change the devices in `main()` to match the machine; `OmniPipeline(model_dir, device)` loads both stages on one device.
 
 ## GPU inference
 

@@ -1,6 +1,7 @@
 # Copyright (C) 2026 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
+import importlib.util
 import sys
 from pathlib import Path
 
@@ -62,3 +63,44 @@ class TestOmniChat:
             assert sample_rate == SPEECH_SAMPLE_RATE
             assert waveform.ndim == 1, "Speech output must be mono"
             assert waveform.size > 0, f"Turn {turn} produced an empty waveform"
+
+    @pytest.mark.qwen3_omni
+    @pytest.mark.samples
+    @pytest.mark.parametrize("convert_model", ["tiny-random-qwen3-omni"], indirect=True)
+    def test_sample_omni_gradio_chat(self, convert_model: str):
+        """Drive the Gradio sample's turn handler directly; launching the server needs a browser to be meaningful.
+
+        Text-only because tiny-random-qwen3-omni can't consume audio input (CVS-194799).
+        """
+        spec = importlib.util.spec_from_file_location(
+            "qwen3_omni_gradio_chat", SAMPLES_PY_DIR / "omni/qwen3_omni_gradio_chat.py"
+        )
+        sample = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(sample)
+        gr = sample.gr
+
+        chat = sample.OmniVoiceChat(convert_model, thinker_device="CPU", talker_device="CPU")
+        history: list[dict[str, str]] = []
+        chat_display: list[dict[str, str]] = []
+        for turn, question in enumerate(["What is OpenVINO?", "Say it shorter."]):
+            updates = list(chat.respond(question, None, history, chat_display))
+
+            first_chat_display, first_speech, first_history, first_prompt, first_microphone = updates[0]
+            assert first_chat_display[-2:] == [
+                {"role": "user", "content": question},
+                {"role": "assistant", "content": ""},
+            ]
+            assert first_speech == gr.skip()
+            assert first_history[-1] == {"role": "user", "content": question}
+            assert (first_prompt, first_microphone) == ("", None), "The first update must clear the inputs"
+
+            speech_chunks = [speech for _, speech, *_ in updates if speech != gr.skip()]
+            assert speech_chunks, f"Turn {turn} streamed no speech"
+            for sample_rate, samples in speech_chunks:
+                assert sample_rate == SPEECH_SAMPLE_RATE
+                assert samples.dtype == np.int16 and samples.ndim == 1 and samples.size > 0
+
+            chat_display, _, history, *_ = updates[-1]
+            assert len(history) == 2 * (turn + 1)
+            assert history[-1]["role"] == "assistant"
+            assert chat_display[-1] == history[-1], "The displayed answer must match the history fed to the model"

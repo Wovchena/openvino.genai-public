@@ -1,9 +1,11 @@
 // Copyright (C) 2023-2026 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -39,11 +41,48 @@ void save_speech(const ov::genai::OmniDecodedResults& results, const std::string
 }
 }  // namespace
 
-int main(int argc, char* argv[]) try {
-    if (argc != 5) {
-        throw std::runtime_error(std::string{"Usage: "} + argv[0] +
-                                 " <MODEL_DIR> <IMAGE_FILE_OR_DIR> <AUDIO_FILE> <VIDEO_FILE>");
+// Receives audio chunks as the talker produces them and reports the delay between the
+// generate() call and the first chunk.
+class ChunkPrinter : public ov::genai::OmniSpeechStreamerBase {
+public:
+    void start() {
+        m_start = std::chrono::steady_clock::now();
+        m_first_chunk_latency.reset();
+        m_chunk_count = 0;
+        m_sample_count = 0;
     }
+
+    ov::genai::StreamingStatus write(const ov::Tensor& audio_chunk) override {
+        if (!m_first_chunk_latency.has_value()) {
+            m_first_chunk_latency = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - m_start);
+            std::cout << "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
+            std::cout << "\n[Time to first audio chunk: " << m_first_chunk_latency->count() << " ms]" << std::endl;
+        }
+        ++m_chunk_count;
+        m_sample_count += audio_chunk.get_size();
+        return ov::genai::StreamingStatus::STOP;
+    }
+
+    void end() override {
+        const auto total = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - m_start);
+        std::cout << "\n[Streamed " << m_chunk_count << " chunks, " << m_sample_count << " samples at 24kHz in "
+                  << total.count() << " ms]" << std::endl;
+    }
+
+private:
+    std::chrono::steady_clock::time_point m_start;
+    std::optional<std::chrono::milliseconds> m_first_chunk_latency;
+    size_t m_chunk_count = 0;
+    size_t m_sample_count = 0;
+};
+
+int main(int argc, char* argv[]) try {
+    // if (argc != 5) {
+    //     throw std::runtime_error(std::string{"Usage: "} + argv[0] +
+    //                              " <MODEL_DIR> <IMAGE_FILE_OR_DIR> <AUDIO_FILE> <VIDEO_FILE>");
+    // }
 
     const std::filesystem::path models_path = argv[1];
 
@@ -52,9 +91,27 @@ int main(int argc, char* argv[]) try {
     // path. Set talker_speech_config.return_audio = false to get text-only responses.
     ov::genai::GenerationConfig text_config;
     text_config.max_new_tokens = 256;
-    // Hand the thinker's tokens and hidden states to the talker as they are produced.
-    // OmniPipeline creates the bridge between the two stages.
     text_config.stream_text2speech = true;
+    // 54808 ms - 100, gpu, cpu, true
+    // 58524 ms - 100, gpu, cpu, false
+    // 132741 ms - 256, gpu, cpu, false
+    // 123998 ms - 256, gpu, cpu, true
+    // 73178 ms - 128, gpu, cpu, false
+    // 68508 ms - 128, gpu, cpu, true
+    // 30888 ms - 50, gpu, cpu, true
+    // 33121 ms - 50, gpu, cpu, false
+
+    // 61875 ms - 100, cpu, gpu, false
+    // 58115 ms - 100, cpu, gpu, true
+
+    // [Time to first audio chunk: 10930 ms] - 100
+    // [Time to first audio chunk: 4142 ms] - 100
+    // [Time to first audio chunk: 4185 ms] - 256
+    // [Time to first audio chunk: 22501 ms] - 256
+    // [Time to first audio chunk: 12910 ms] - 128
+    // [Time to first audio chunk: 4477 ms] - 128
+    // [Time to first audio chunk: 4256 ms] - 50
+    // [Time to first audio chunk: 7199 ms] - 50
 
     ov::genai::OmniTalkerSpeechConfig talker_speech_config(models_path);
     talker_speech_config.return_audio = true;
@@ -71,11 +128,8 @@ int main(int argc, char* argv[]) try {
     // sharing a VLM base across pipelines, or injecting custom TalkerBase implementations.
     // For simpler use cases: ov::genai::OmniPipeline pipe(models_path, "CPU");
 
-    // Pinning off because stream_text2speech has both stages inferring at once, which leaves a
-    // pinned talker confined to a single core for the whole call.
-    auto vlm = std::make_shared<ov::genai::VLMPipeline>(models_path, "CPU", ov::hint::enable_cpu_pinning(false));
-    auto talker =
-        std::make_shared<ov::genai::Talker>(models_path, "CPU", ov::AnyMap{ov::hint::enable_cpu_pinning(false)});
+    auto vlm = std::make_shared<ov::genai::VLMPipeline>(models_path, "GPU");
+    auto talker = std::make_shared<ov::genai::Talker>(models_path, "CPU");
     ov::genai::OmniPipeline pipe(vlm, talker);
 
     // Speaker API demo: list available speakers and demonstrate voice blending.
@@ -107,17 +161,21 @@ int main(int argc, char* argv[]) try {
     }
 
     ov::genai::ChatHistory history;
-    auto [video, video_metadata] = utils::load_video(argv[4]);
+    // auto [video, video_metadata] = utils::load_video(argv[4]);
     std::vector<ov::Tensor> videos;
-    videos.push_back(std::move(video));
+    // videos.push_back(std::move(video));
     std::vector<ov::genai::VideoMetadata> videos_metadata;
-    videos_metadata.push_back(std::move(video_metadata));
+    // videos_metadata.push_back(std::move(video_metadata));
+    auto chunk_printer = std::make_shared<ChunkPrinter>();
 
     std::string prompt;
     std::cout << "question:\n";
     std::getline(std::cin, prompt);
 
     history.push_back({{"role", "user"}, {"content", std::move(prompt)}});
+    chunk_printer->start();
+
+    auto start = std::chrono::steady_clock::now();
     ov::genai::OmniDecodedResults decoded_results = pipe.generate(history,
                                                                    rgbs,
                                                                    videos,
@@ -125,7 +183,12 @@ int main(int argc, char* argv[]) try {
                                                                    audios,
                                                                    text_config,
                                                                    talker_speech_config,
-                                                                   print_subword);
+                                                                   print_subword,
+                                                                   chunk_printer
+                                                                );
+    auto end = std::chrono::steady_clock::now();
+    std::cout << "Generation time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
+    std::cout << "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n";
     history.push_back({{"role", "assistant"}, {"content", std::move(decoded_results.texts[0])}});
     save_speech(decoded_results, "output_audio_0.wav");
 
@@ -137,6 +200,7 @@ int main(int argc, char* argv[]) try {
         // back through the history rather than re-sending turn 1's tensors.
         std::vector<ov::Tensor> turn_images, turn_videos, turn_audios;
         std::vector<ov::genai::VideoMetadata> turn_videos_metadata;
+        chunk_printer->start();
         decoded_results = pipe.generate(history,
                                         turn_images,
                                         turn_videos,
@@ -144,7 +208,9 @@ int main(int argc, char* argv[]) try {
                                         turn_audios,
                                         text_config,
                                         talker_speech_config,
-                                        print_subword);
+                                        print_subword,
+                                        chunk_printer
+                                    );
         history.push_back({{"role", "assistant"}, {"content", std::move(decoded_results.texts[0])}});
         save_speech(decoded_results, "output_audio_" + std::to_string(turn) + ".wav");
 

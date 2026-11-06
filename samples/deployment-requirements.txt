@@ -6,3 +6,4 @@ pillow==12.3.0  # Image processing for VLMs
 json5==0.15.0  # For ReAct
 pydantic==2.13.4  # For Structured output json schema
 opencv-python==5.0.0.93 # For video input in VLM and Omni samples
+gradio==6.31.0  # Web UI for the Omni voice chat sample
